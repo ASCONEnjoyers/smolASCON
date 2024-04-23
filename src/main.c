@@ -10,15 +10,25 @@ int main()
     while (1)
     {
         scanf("%s", buf);
-        uint64_t *K = (uint64_t *) calloc(2, sizeof(uint64_t));
-        K[0] = 7822;
-        uint64_t *N = (uint64_t *) calloc(2, sizeof(uint64_t));
-        N[1]=12;
-        uint64_t *state = generateFirstState(K, N);
-        for(int i = 0; i < 5; i++)
+        uint64_t *K = (uint64_t *)calloc(2, sizeof(uint64_t));
+        K[0] = 0xf000000000000000;
+        K[1] = 0xef000000000000f1;
+        uint64_t *N = (uint64_t *)calloc(2, sizeof(uint64_t));
+        N[0] = 0xf000000000000000;
+        N[1] = 0xf000000000000000;
+        uint64_t *state = generateEntranceState(K, N);
+        for (int i = 0; i < 5; i++)
         {
-            printf("%lx\n", state[i]);
+            printf("%16lx\n", state[i]);
         }
+        printf("\n");
+
+        uint64_t *newState = doPermutation(state, 0, 0);
+        for (int i = 0; i < 5; i++)
+        {
+            printf("%16lx\n", newState[i]);
+        }
+        printf("\n");
     }
 
     return 0;

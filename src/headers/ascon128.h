@@ -6,4 +6,5 @@
 #define A 12
 #define B 6
 
-uint64_t *generateFirstState(uint64_t *K, uint64_t *N);
+uint64_t *generateEntranceState(uint64_t *K, uint64_t *N);
+uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type);
