@@ -54,14 +54,27 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
     for(int i = 63; i >= 0; i--){
         state5bit = 0;
 
+        //extract 5 bit column from state
         state5bit = EXTRACT_BIT(0, i, 4) | EXTRACT_BIT(1, i, 3) | EXTRACT_BIT(2, i, 2) | EXTRACT_BIT(3, i, 1) | EXTRACT_BIT(4, i, 0);
 
-        printf("aiuto %x\n", state5bit);
+        printf("column %x\n", state5bit);
         printf("x0 %x\n", EXTRACT_BIT(0, i, 4));
         printf("x1 %x\n",  EXTRACT_BIT(1, i, 3));
         printf("x2 %x\n", EXTRACT_BIT(2, i, 2));
         printf("x3 %x\n", EXTRACT_BIT(3, i, 1));
         printf("x4 %x\n", EXTRACT_BIT(4, i, 0));
+
+        state5bit = sbox[state5bit]; // apply sbox
+        printf("sbox %x\n", state5bit);
+        u_int64_t state64bit = state5bit;
+        printf("state64bit %llx\n", state64bit);
+        //rebuild 64 bit state
+        state[0] = (state[0] & ~(1ULL << i)) | ((state64bit & 0x1) << i);
+        state[1] = (state[1] & ~(1ULL << i)) | (((state64bit >> 1) & 0x1) << i);
+        state[2] = (state[2] & ~(1ULL << i)) | (((state64bit >> 2) & 0x1) << i);
+        state[3] = (state[3] & ~(1ULL << i)) | (((state64bit >> 3) & 0x1) << i);
+        state[4] = (state[4] & ~(1ULL << i)) | (((state64bit >> 4) & 0x1) << i);
+        
     }
     
 
