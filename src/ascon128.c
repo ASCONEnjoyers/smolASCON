@@ -89,3 +89,11 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 
     return state;
 }
+
+
+u_int64_t * pbox(uint64_t *state, uint8_t roundNumber, uint8_t type){
+    for(int i = 0; i < roundNumber; i++){
+        state = doPermutation(state, roundNumber, type);
+    }
+    return state;
+}
