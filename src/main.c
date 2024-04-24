@@ -12,27 +12,12 @@ int main()
     {
         scanf("%s", plaintext);
         scanf("%s", associated);
-        /*uint64_t *K = (uint64_t *)calloc(2, sizeof(uint64_t));
-        K[0] = 0xf000000000000000;
-        K[1] = 0xef000000000000f1;
-        uint64_t *N = (uint64_t *)calloc(2, sizeof(uint64_t));
-        N[0] = 0xf000000000000000;
-        N[1] = 0xf000000000000000;
-        uint64_t *state = generateEntranceState(K, N);
-        for (int i = 0; i < 5; i++)
-        {
-            printf("%16lx\n", state[i]);
-        }
-        printf("\n");
+        
 
-        uint64_t *newState = doPermutation(state, 0, 0);
-        for (int i = 0; i < 5; i++)
-        {
-            printf("%16lx\n", newState[i]);
-        }
-        printf("\n");*/
+        char *key = "aaaaaaaabbbbbbbb";
+        char *nonce = "ccccccccdddddddd";
 
-        splitDataIn64bitBlock(plaintext);
+        char *ciphertext = encrypt(plaintext, associated, key, nonce);
 
         return 0;
     }

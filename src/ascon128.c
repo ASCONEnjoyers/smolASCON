@@ -10,6 +10,15 @@
 uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b};                                                                                                    // adding constants
 uint8_t sbox[] = {0x4, 0xb, 0x1f, 0x14, 0x1a, 0x15, 0x9, 0x2, 0x1b, 0x5, 0x8, 0x12, 0x1d, 0x3, 0x6, 0x1c, 0x1e, 0x13, 0x7, 0xe, 0x0, 0xd, 0x11, 0x18, 0x10, 0xc, 0x1, 0x19, 0x16, 0xa, 0xf, 0x17}; // 5bit sbox
 
+void printState(uint64_t *state)
+{
+    for (int i = 0; i < 5; i++)
+    {
+        printf("x%d> %lx\n", i, state[i]);
+    }
+    printf("\n");
+}
+
 uint64_t *generateIV(uint8_t r, uint8_t a, uint8_t b)
 {
     uint64_t *buffer = (uint64_t *)calloc(1, sizeof(uint64_t)); // 64 bit buffer
@@ -59,18 +68,18 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
         // extract 5 bit column from state
         state5bit = EXTRACT_BIT(0, i, 4) | EXTRACT_BIT(1, i, 3) | EXTRACT_BIT(2, i, 2) | EXTRACT_BIT(3, i, 1) | EXTRACT_BIT(4, i, 0);
 
-        printf("column %x\n", state5bit);
-        printf("x0 %lx\n", EXTRACT_BIT(0, i, 4));
-        printf("x1 %lx\n", EXTRACT_BIT(1, i, 3));
-        printf("x2 %lx\n", EXTRACT_BIT(2, i, 2));
-        printf("x3 %lx\n", EXTRACT_BIT(3, i, 1));
-        printf("x4 %lx\n", EXTRACT_BIT(4, i, 0));
+        // printf("column %x\n", state5bit);
+        // printf("x0 %lx\n", EXTRACT_BIT(0, i, 4));
+        // printf("x1 %lx\n", EXTRACT_BIT(1, i, 3));
+        // printf("x2 %lx\n", EXTRACT_BIT(2, i, 2));
+        // printf("x3 %lx\n", EXTRACT_BIT(3, i, 1));
+        // printf("x4 %lx\n", EXTRACT_BIT(4, i, 0));
 
         state5bit = sbox[state5bit]; // apply sbox
-        printf("sbox %x\n", state5bit);
+        // printf("sbox %x\n", state5bit);
         uint64_t state64bit = state5bit;
-        printf("state64bit %lx\n", state64bit);
-        // rebuild 64 bit state
+        // printf("state64bit %lx\n", state64bit);
+        //  rebuild 64 bit state
         state[0] = (state[0] & ~(1ULL << i)) | ((state64bit & 0x1) << i);
         state[1] = (state[1] & ~(1ULL << i)) | (((state64bit >> 1) & 0x1) << i);
         state[2] = (state[2] & ~(1ULL << i)) | (((state64bit >> 2) & 0x1) << i);
@@ -105,12 +114,9 @@ uint64_t *splitDataIn64bitBlock(char *data)
     uint16_t num_blocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
     uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
 
-    printf("blocs %d\n", num_blocks);
-
     for (uint16_t i = 0; i < num_blocks - 1; i++)
     {
         memcpy(&blocks[i], data + (i * 8), sizeof(char) * 8);
-        printf("%lx\n", blocks[i]);
     }
     if (!(len % 8))
     {
@@ -122,7 +128,66 @@ uint64_t *splitDataIn64bitBlock(char *data)
         // + padding
         blocks[num_blocks - 1] |= (1ULL << (len * 8 % BLOCK_SIZE));
     }
-    printf("%16lx\n", blocks[num_blocks - 1]);
 
     return blocks;
+}
+
+uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase in cipher diagram
+{
+    uint64_t *state = generateEntranceState(key, nonce);
+    printState(state);
+
+    state = pbox(state, A, 0);
+    state[4] ^= (uint64_t)*key;
+
+    return state;
+}
+
+char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
+{
+    char *ciphertext;
+    uint64_t *blockKey = splitDataIn64bitBlock(key);
+    uint64_t *blockNonce = splitDataIn64bitBlock(nonce);
+
+    // INITIALIZATION
+    uint64_t *state = initialization(blockKey, blockNonce);
+    // printf("After initialization: \n");
+    // printState(state);
+
+    // ASSOCIATED DATA MANAGEMENT
+    if (strlen(associated))
+    { // if there is any associated date
+        // printf("Associated!\n");
+        uint64_t *blockAssociated = splitDataIn64bitBlock(associated);
+        uint16_t numBlocks = (strlen(associated) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+        if (numBlocks == 1) // if there is only one associated data block
+        {
+            // printf("only associated data block 0\n");
+            state[0] ^= blockAssociated[0];
+            pbox(state, B, 1); // pboxing, as the diagram shows
+            // printState(state);
+        }
+        else
+        {
+            for (uint16_t i = 0; i < numBlocks; i++)
+            { // for each generated associated data block
+                // printf("Associated data block %d\n", i);
+                state[0] ^= blockAssociated[i]; // xoring the associated date
+                pbox(state, B, 1);              // pboxing, as the diagram shows
+                // printState(state);
+            }
+        }
+    }
+
+    // printf("final before final xor: \n");
+    // printState(state);
+
+    // printf("final: \n");
+    state[4] ^= 1ULL; // final xor with 0*||1
+    printState(state);
+
+    // ENCRYPTION AND FINALIZATION
+    // RebelNightmare's task here>
+
+    return ciphertext;
 }
