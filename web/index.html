@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Encryption/Decryption</title>
+    <script>
+        function send() {
+            var input = document.getElementById('input').value;
+            var base64Input = btoa(input);
+            // urlencode base64Input
+            base64Input = encodeURIComponent(base64Input);
+            var url = "/encrypt?a=" + base64Input;
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = xhr.responseText;
+                    document.getElementById('output').textContent = response;
+                }
+            };
+            xhr.send();
+        }
+    </script>
+</head>
+<body>
+    
+    <h1>Encryption/Decryption</h1>
+    <textarea id="input" rows="4" cols="50"></textarea>
+    <button onclick="send()">send</button>
+    <br>
+    <h3>Output:</h3>
+    <p id="output" href="#" target="_blank"></p>
+
+    
+</body>
+</html>
