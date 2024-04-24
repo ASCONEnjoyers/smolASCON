@@ -5,12 +5,14 @@
 int main()
 {
 
-    char buf[500];
+    char plaintext[500];
+    char associated[500];
 
     while (1)
     {
-        scanf("%s", buf);
-        uint64_t *K = (uint64_t *)calloc(2, sizeof(uint64_t));
+        scanf("%s", plaintext);
+        scanf("%s", associated);
+        /*uint64_t *K = (uint64_t *)calloc(2, sizeof(uint64_t));
         K[0] = 0xf000000000000000;
         K[1] = 0xef000000000000f1;
         uint64_t *N = (uint64_t *)calloc(2, sizeof(uint64_t));
@@ -28,8 +30,10 @@ int main()
         {
             printf("%16lx\n", newState[i]);
         }
-        printf("\n");
-    }
+        printf("\n");*/
 
-    return 0;
+        splitDataIn64bitBlock(plaintext);
+
+        return 0;
+    }
 }

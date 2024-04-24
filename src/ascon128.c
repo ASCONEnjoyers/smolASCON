@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #define EXTRACT_BIT(bit, pos, shift) (((state[bit] >> pos) & 0x1) << shift)
 
@@ -35,7 +36,7 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 {
     uint8_t state5bit; // 5 bit from the state. used to perform sbox operation
     // 64 bit mask to take a precise bit from the state
-    //uint64_t mask=~0ULL;
+    // uint64_t mask=~0ULL;
     // int max=63;
 
     if (type == 0)                                                      // a-type round
@@ -45,38 +46,37 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 
     // Substitution layer
     // Here, i'm building the 5 bit state from the 64 bit state, this has to be done for each 64 5 bit groups
-    
-    //state5bit = 0;
-    // state5bit = ((((state5bit | (state[0] >> 63 & 0x1) << 1) | (state[0] >> 62 & 0x1) << 1) | (state[0] >> 61 & 0x1) << 1) | (state[0] >> 60 & 0x1) << 1) | (state[0] >> 59 & 0x1);
-    // I want to cry
-    // printf("aiuto %x\n", state5bit);
 
-    for(int i = 63; i >= 0; i--){
+    // state5bit = 0;
+    //  state5bit = ((((state5bit | (state[0] >> 63 & 0x1) << 1) | (state[0] >> 62 & 0x1) << 1) | (state[0] >> 61 & 0x1) << 1) | (state[0] >> 60 & 0x1) << 1) | (state[0] >> 59 & 0x1);
+    //  I want to cry
+    //  printf("aiuto %x\n", state5bit);
+
+    for (int i = 63; i >= 0; i--)
+    {
         state5bit = 0;
 
-        //extract 5 bit column from state
+        // extract 5 bit column from state
         state5bit = EXTRACT_BIT(0, i, 4) | EXTRACT_BIT(1, i, 3) | EXTRACT_BIT(2, i, 2) | EXTRACT_BIT(3, i, 1) | EXTRACT_BIT(4, i, 0);
 
         printf("column %x\n", state5bit);
-        printf("x0 %x\n", EXTRACT_BIT(0, i, 4));
-        printf("x1 %x\n",  EXTRACT_BIT(1, i, 3));
-        printf("x2 %x\n", EXTRACT_BIT(2, i, 2));
-        printf("x3 %x\n", EXTRACT_BIT(3, i, 1));
-        printf("x4 %x\n", EXTRACT_BIT(4, i, 0));
+        printf("x0 %lx\n", EXTRACT_BIT(0, i, 4));
+        printf("x1 %lx\n", EXTRACT_BIT(1, i, 3));
+        printf("x2 %lx\n", EXTRACT_BIT(2, i, 2));
+        printf("x3 %lx\n", EXTRACT_BIT(3, i, 1));
+        printf("x4 %lx\n", EXTRACT_BIT(4, i, 0));
 
         state5bit = sbox[state5bit]; // apply sbox
         printf("sbox %x\n", state5bit);
-        u_int64_t state64bit = state5bit;
-        printf("state64bit %llx\n", state64bit);
-        //rebuild 64 bit state
+        uint64_t state64bit = state5bit;
+        printf("state64bit %lx\n", state64bit);
+        // rebuild 64 bit state
         state[0] = (state[0] & ~(1ULL << i)) | ((state64bit & 0x1) << i);
         state[1] = (state[1] & ~(1ULL << i)) | (((state64bit >> 1) & 0x1) << i);
         state[2] = (state[2] & ~(1ULL << i)) | (((state64bit >> 2) & 0x1) << i);
         state[3] = (state[3] & ~(1ULL << i)) | (((state64bit >> 3) & 0x1) << i);
         state[4] = (state[4] & ~(1ULL << i)) | (((state64bit >> 4) & 0x1) << i);
-        
     }
-    
 
     // tutto ciò in un for che da 6
 
@@ -90,10 +90,39 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
     return state;
 }
 
-
-u_int64_t * pbox(uint64_t *state, uint8_t roundNumber, uint8_t type){
-    for(int i = 0; i < roundNumber; i++){
+uint64_t *pbox(uint64_t *state, uint8_t roundNumber, uint8_t type)
+{
+    for (int i = 0; i < roundNumber; i++)
+    {
         state = doPermutation(state, roundNumber, type);
     }
     return state;
+}
+
+uint64_t *splitDataIn64bitBlock(char *data)
+{
+    uint16_t len = strlen(data);
+    uint16_t num_blocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
+    uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
+
+    printf("blocs %d\n", num_blocks);
+
+    for (uint16_t i = 0; i < num_blocks - 1; i++)
+    {
+        memcpy(&blocks[i], data + (i * 8), sizeof(char) * 8);
+        printf("%lx\n", blocks[i]);
+    }
+    if (!(len % 8))
+    {
+        memcpy(&blocks[num_blocks - 1], data + ((num_blocks - 1) * 8), sizeof(char) * 8);
+    }
+    else
+    {
+        memcpy(&blocks[num_blocks - 1], data + ((num_blocks - 1) * 8), sizeof(char) * (len % 8));
+        // + padding
+        blocks[num_blocks - 1] |= (1ULL << (len * 8 % BLOCK_SIZE));
+    }
+    printf("%16lx\n", blocks[num_blocks - 1]);
+
+    return blocks;
 }
