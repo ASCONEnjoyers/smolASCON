@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#define EXTRACT_BIT(bit, pos, shift) (((state[bit] >> pos) & 0x1) << shift)
+#define ROTATE(state, l) ((state >> l) ^ (state << (64 - l))) // rotate right
 
-uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b};                                                                                                    // adding constants
-uint8_t sbox[] = {0x4, 0xb, 0x1f, 0x14, 0x1a, 0x15, 0x9, 0x2, 0x1b, 0x5, 0x8, 0x12, 0x1d, 0x3, 0x6, 0x1c, 0x1e, 0x13, 0x7, 0xe, 0x0, 0xd, 0x11, 0x18, 0x10, 0xc, 0x1, 0x19, 0x16, 0xa, 0xf, 0x17}; // 5bit sbox
+uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}; // adding constants
+uint64_t temp[5] = {0};                                                                         // to build the sbox
 
 void printState(uint64_t *state)
 {
     for (int i = 0; i < 5; i++)
     {
-        printf("x%d> %lx\n", i, state[i]);
+        printf("x%d> %16lx\n", i, state[i]);
     }
     printf("\n");
 }
@@ -43,58 +43,47 @@ uint64_t *generateEntranceState(uint64_t *K, uint64_t *N) // 128 bit key, 128 bi
 
 uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 {
-    uint8_t state5bit; // 5 bit from the state. used to perform sbox operation
-    // 64 bit mask to take a precise bit from the state
-    // uint64_t mask=~0ULL;
-    // int max=63;
-
-    if (type == 0)                                                      // a-type round
-        state[2] = state[2] ^ (uint64_t)constants[roundNumber];         // add round constant to key
-    else                                                                // b-type round
-        state[2] = state[2] ^ (uint64_t)constants[roundNumber + A - B]; // add round constant to key
+    if (type == 0)                                            // a-type round
+        state[2] ^= (uint64_t)constants[roundNumber];         // add round constant to key
+    else                                                      // b-type round
+        state[2] ^= (uint64_t)constants[roundNumber + A - B]; // add round constant to key
 
     // Substitution layer
     // Here, i'm building the 5 bit state from the 64 bit state, this has to be done for each 64 5 bit groups
-
-    // state5bit = 0;
-    //  state5bit = ((((state5bit | (state[0] >> 63 & 0x1) << 1) | (state[0] >> 62 & 0x1) << 1) | (state[0] >> 61 & 0x1) << 1) | (state[0] >> 60 & 0x1) << 1) | (state[0] >> 59 & 0x1);
-    //  I want to cry
-    //  printf("aiuto %x\n", state5bit);
-
-    for (int i = 63; i >= 0; i--)
-    {
-        state5bit = 0;
-
-        // extract 5 bit column from state
-        state5bit = EXTRACT_BIT(0, i, 4) | EXTRACT_BIT(1, i, 3) | EXTRACT_BIT(2, i, 2) | EXTRACT_BIT(3, i, 1) | EXTRACT_BIT(4, i, 0);
-
-        // printf("column %x\n", state5bit);
-        // printf("x0 %lx\n", EXTRACT_BIT(0, i, 4));
-        // printf("x1 %lx\n", EXTRACT_BIT(1, i, 3));
-        // printf("x2 %lx\n", EXTRACT_BIT(2, i, 2));
-        // printf("x3 %lx\n", EXTRACT_BIT(3, i, 1));
-        // printf("x4 %lx\n", EXTRACT_BIT(4, i, 0));
-
-        state5bit = sbox[state5bit]; // apply sbox
-        // printf("sbox %x\n", state5bit);
-        uint64_t state64bit = state5bit;
-        // printf("state64bit %lx\n", state64bit);
-        //  rebuild 64 bit state
-        state[0] = (state[0] & ~(1ULL << i)) | ((state64bit & 0x1) << i);
-        state[1] = (state[1] & ~(1ULL << i)) | (((state64bit >> 1) & 0x1) << i);
-        state[2] = (state[2] & ~(1ULL << i)) | (((state64bit >> 2) & 0x1) << i);
-        state[3] = (state[3] & ~(1ULL << i)) | (((state64bit >> 3) & 0x1) << i);
-        state[4] = (state[4] & ~(1ULL << i)) | (((state64bit >> 4) & 0x1) << i);
-    }
-
-    // tutto ciò in un for che da 6
+    state[0] ^= state[4];
+    state[4] ^= state[3];
+    state[2] ^= state[1];
+    temp[0] = state[0];
+    temp[1] = state[1];
+    temp[2] = state[2];
+    temp[3] = state[3];
+    temp[4] = state[4];
+    temp[0] = ~temp[0];
+    temp[1] = ~temp[1];
+    temp[2] = ~temp[2];
+    temp[3] = ~temp[3];
+    temp[4] = ~temp[4];
+    temp[0] &= state[1];
+    temp[1] &= state[2];
+    temp[2] &= state[3];
+    temp[3] &= state[4];
+    temp[4] &= state[0];
+    state[0] ^= temp[1];
+    state[1] ^= temp[2];
+    state[2] ^= temp[3];
+    state[3] ^= temp[4];
+    state[4] ^= temp[0];
+    state[1] ^= state[0];
+    state[0] ^= state[4];
+    state[3] ^= state[2];
+    state[2] = ~state[2];
 
     // Permutation layer
-    state[0] = state[0] ^ (state[0] >> 19) ^ (state[1] >> 28);
-    state[1] = state[1] ^ (state[1] >> 61) ^ (state[0] >> 39);
-    state[2] = state[2] ^ (state[2] >> 1) ^ (state[1] >> 6);
-    state[3] = state[3] ^ (state[3] >> 10) ^ (state[2] >> 17);
-    state[4] = state[4] ^ (state[4] >> 7) ^ (state[3] >> 41);
+    state[0] ^= ROTATE(state[0], 19) ^ ROTATE(state[0], 28);
+    state[1] ^= ROTATE(state[1], 61) ^ ROTATE(state[1], 39);
+    state[2] ^= ROTATE(state[2], 1) ^ ROTATE(state[2], 6);
+    state[3] ^= ROTATE(state[3], 10) ^ ROTATE(state[3], 17);
+    state[4] ^= ROTATE(state[4], 7) ^ ROTATE(state[4], 41);
 
     return state;
 }
@@ -103,12 +92,12 @@ uint64_t *pbox(uint64_t *state, uint8_t roundNumber, uint8_t type)
 {
     for (int i = 0; i < roundNumber; i++)
     {
-        state = doPermutation(state, roundNumber, type);
+        state = doPermutation(state, i, type);
     }
     return state;
 }
 
-uint64_t *splitDataIn64bitBlock(char *data)
+uint64_t *splitDataIn64bitBlock(char *data) // split data in 64 bit blocks and add padding
 {
     uint16_t len = strlen(data);
     uint16_t num_blocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
@@ -135,11 +124,38 @@ uint64_t *splitDataIn64bitBlock(char *data)
 uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase in cipher diagram
 {
     uint64_t *state = generateEntranceState(key, nonce);
+    printf("Entrance state: \n");
     printState(state);
 
     state = pbox(state, A, 0);
-    state[4] ^= (uint64_t)*key;
+    state[3] ^= key[0];
+    state[4] ^= key[1];
 
+    return state;
+}
+
+uint64_t *processAssociated(char *associated, uint64_t *state)
+{
+    uint64_t *blockAssociated = splitDataIn64bitBlock(associated);
+    uint16_t numBlocks = (strlen(associated) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    if (numBlocks == 1) // if there is only one associated data block
+    {
+        // printf("only associated data block 0\n");
+        state[0] ^= blockAssociated[0];
+        pbox(state, B, 1); // pboxing, as the diagram shows
+        // printState(state);
+    }
+    else
+    {
+        for (uint16_t i = 0; i < numBlocks; i++)
+        { // for each generated associated data block
+            // printf("Associated data block %d\n", i);
+            state[0] ^= blockAssociated[i]; // xoring the associated date
+            pbox(state, B, 1);              // pboxing, as the diagram shows
+            // printState(state);
+        }
+    }
+    state[4] ^= 1ULL; // final xor with 0*||1
     return state;
 }
 
@@ -151,39 +167,14 @@ char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     // INITIALIZATION
     uint64_t *state = initialization(blockKey, blockNonce);
-    // printf("After initialization: \n");
-    // printState(state);
 
     // ASSOCIATED DATA MANAGEMENT
     if (strlen(associated))
     { // if there is any associated date
         // printf("Associated!\n");
-        uint64_t *blockAssociated = splitDataIn64bitBlock(associated);
-        uint16_t numBlocks = (strlen(associated) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
-        if (numBlocks == 1) // if there is only one associated data block
-        {
-            // printf("only associated data block 0\n");
-            state[0] ^= blockAssociated[0];
-            pbox(state, B, 1); // pboxing, as the diagram shows
-            // printState(state);
-        }
-        else
-        {
-            for (uint16_t i = 0; i < numBlocks; i++)
-            { // for each generated associated data block
-                // printf("Associated data block %d\n", i);
-                state[0] ^= blockAssociated[i]; // xoring the associated date
-                pbox(state, B, 1);              // pboxing, as the diagram shows
-                // printState(state);
-            }
-        }
+        state = processAssociated(associated, state);
     }
 
-    // printf("final before final xor: \n");
-    // printState(state);
-
-    // printf("final: \n");
-    state[4] ^= 1ULL; // final xor with 0*||1
     printState(state);
 
     // ENCRYPTION AND FINALIZATION
