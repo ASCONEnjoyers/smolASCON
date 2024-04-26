@@ -1,0 +1,14 @@
+\section{Introduzione}
+Con questo documento intendiamo proporre un'analisi e implementazione dello schema di cifratura \textbf{ASCON-128} e dell'algoritmo di hashing \textbf{ASCON-HASH}, entrambi facenti parte di una famiglia più ampia di cifrari e algoritmi di hashing. In particolare, sono presenti: 
+\begin{itemize}
+    \item \textsl{ASCON-128a}: Cifrario a blocchi di 128 bit anziché 64
+    \item \textsl{ASCON-80pq}: maggiore robustezza contro ricerca della chiave tramite quantum-computing (chiave da 160 bit)
+    \item \textsl{ASCON-HASHa}
+    \item \textsl{ASCON-XOF}: Extendable output function per produrre hash outputs di lunghezza arbitraria
+    \item \textsl{ASCON-XOFa}
+\end{itemize}
+Tutti gli schemi forniscono una sicurezza di 128-bit ed utilizzano una matrice di stato da 320-bit nei processi di cifratura, decifratura ed hashing. Le raccomandazioni NIST includono le combinazioni ASCON-128 + ASCON-HASH oppure ASCON-128a + ASCON-HASHa.
+\subsection{Agenda}
+Nelle sezioni successive si introdurrà in maniera più dettagliata il funzionamento ed i parametri per l'utilizzo del cifrario; si analizzeranno le strutture scelte, effettuando richiami e confronti (ove possibile) con gli argomenti affrontati durante l'insegnamento di \textsl{Crittografia}. Si proseguirà poi con una implementazione in linguaggio C del cifrario, con delle dimostrazioni di utilizzo, per concludere infine con una proposta di applicazione dello schema in uno scenario di comunicazione wireless tra sistemi embedded, al fine di ricreare uno scenario realistico e dimostrale l'utilizzabilità dello schema in ambienti con potenza di calcolo, memoria e energia limitate. 
+
+\newpage

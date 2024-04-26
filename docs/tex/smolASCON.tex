@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage{package}
+\graphicspath{ {./images/} }
+
+\makeindex
+
+
+\title{
+    {\LARGE ASCON v1.2}\\
+    \vskip 0.1cm{\Large Analisi e implementazione}
+    %\vskip 0.8 cm{\Large Facolt\`a di Scienze e Tecnologie}\\
+    \vskip 0.4cm{\large CdL in Sicurezza dei Sistemi e delle Reti Informatiche}
+}
+\author{
+    \Large Melissa Moioli, Mattia Perfumo, Tiziano Radicchi\\
+    \large 09831A, xxx, 12172A
+}
+\date{
+    {\large\today}
+}
+
+\makeatletter
+\newcommand{\@alphalph}{}% Check that \@alphalph is undefined.
+\let\@alphalph=\alphalph
+\makeatother
+
+
+\begin{document}
+\pagenumbering{gobble}
+
+\begin{titlepage}
+    \pagestyle{empty}
+    %\selectlanguage{italian}
+    \maketitle
+    %\selectlanguage{english}
+    \vspace{2em}
+    \begin{abstract}
+        \textit{\input{./src/abstract}}
+        %\textit{\kant[1]}% TODO 
+    \end{abstract}
+    \vskip 4cm\centerline{\includegraphics[height=50mm]{./src/unimi}}
+    \newpage
+    \pagenumbering{Roman}
+    \tableofcontents
+    %\selectlanguage{italian}
+    \vspace{\fill}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\lhead{
+    ASCON - Analisi e implementazione
+}
+\rhead{Moioli, Perfumo, Radicchi}
+
+\input{src/intro.tex}
+\input{src/car.tex}
+\input{src/design.tex}
+\input{src/crittoanalisi.tex}
+
+
+\newpage
+\end{document}

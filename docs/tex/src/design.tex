@@ -1,0 +1,17 @@
+\section{Design Rationale}
+La suite è basata sullo \textbf{sponge design}. La funzione $p$ è basata su SPN (Substitution-Permutation-Network). Per questo le componenti principali del cifrario sono ispirate a schemi già standardizzati. 
+\newline\newline
+Il substitution layer utilizza una sostituzione affine equivalente alla S-Box utilizzata in \textsl{SHA-3}. Il permutation layer utilizza funzioni lineare simili a quelle utilizzate da SHA-2. 
+\newline\newline
+Lo sponge-based design in particolare si avvicina allo \textsl{SpongeWrap} e al \textsl{MonkeyDuplex}. Lo sponge-based design ha diversi vantaggi rispetto ad altre tecniche di costruzione come i tradizionali cifrari a blocchi o le modalità hash-based: 
+\begin{itemize}
+    \item Ampiamente studiate ad analizzate con diverse dimostrazioni sulla solo sicurezza. Utilizzate in SHA-3
+    \item Design semplice, privo di key scheduling
+    \item I blocchi di plaintext e ciphertext possono essere computati direttamente, senza attendere per la ricezione del messaggio completo o di conoscere la lunghezza di esso. 
+    \item Utilizzo della medesima funzione sia per cifrare che per decifrare. 
+\end{itemize} 
+\subsection{Sponge Function}
+TODO
+\subsection{MonkeyDuplex}
+TODO
+\newpage

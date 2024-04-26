@@ -5,10 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ROTATE(state, l) ((state >> l) ^ (state << (64 - l))) // rotate right
+#define RROTATE(state, l) ((state >> l) ^ (state << (64 - l))) // ROTATE right
 
-uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}; // adding constants
-uint64_t temp[5] = {0};                                                                         // to build the sbox
+uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}; // adding constants                                                              
 
 void printState(uint64_t *state)
 {
@@ -43,6 +42,7 @@ uint64_t *generateEntranceState(uint64_t *K, uint64_t *N) // 128 bit key, 128 bi
 
 uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 {
+    uint64_t temp[5] = {0}; // temporary state to build the sbox
     if (type == 0)                                            // a-type round
         state[2] ^= (uint64_t)constants[roundNumber];         // add round constant to key
     else                                                      // b-type round
@@ -79,11 +79,11 @@ uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
     state[2] = ~state[2];
 
     // Permutation layer
-    state[0] ^= ROTATE(state[0], 19) ^ ROTATE(state[0], 28);
-    state[1] ^= ROTATE(state[1], 61) ^ ROTATE(state[1], 39);
-    state[2] ^= ROTATE(state[2], 1) ^ ROTATE(state[2], 6);
-    state[3] ^= ROTATE(state[3], 10) ^ ROTATE(state[3], 17);
-    state[4] ^= ROTATE(state[4], 7) ^ ROTATE(state[4], 41);
+    state[0] ^= RROTATE(state[0], 19) ^ RROTATE(state[0], 28);
+    state[1] ^= RROTATE(state[1], 61) ^ RROTATE(state[1], 39);
+    state[2] ^= RROTATE(state[2], 1) ^ RROTATE(state[2], 6);
+    state[3] ^= RROTATE(state[3], 10) ^ RROTATE(state[3], 17);
+    state[4] ^= RROTATE(state[4], 7) ^ RROTATE(state[4], 41);
 
     return state;
 }
