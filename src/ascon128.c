@@ -159,6 +159,40 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
     return state;
 }
 
+uint16_t getNumBlocks(char *data){
+    uint16_t numblocks = (strlen(data) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    return numblocks;
+}
+
+
+char *base64_encode(const unsigned char *data, size_t input_length) {
+    const char base64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    size_t output_length = 4 * ((input_length + 2) / 3);
+    char *encoded_data = malloc(output_length + 1);
+    if (encoded_data == NULL) return NULL;
+
+    for (size_t i = 0, j = 0; i < input_length;) {
+        uint32_t octet_a = i < input_length ? data[i++] : 0;
+        uint32_t octet_b = i < input_length ? data[i++] : 0;
+        uint32_t octet_c = i < input_length ? data[i++] : 0;
+
+        uint32_t triple = (octet_a << 16) + (octet_b << 8) + octet_c;
+
+        encoded_data[j++] = base64_table[(triple >> 18) & 0x3F];
+        encoded_data[j++] = base64_table[(triple >> 12) & 0x3F];
+        encoded_data[j++] = base64_table[(triple >> 6) & 0x3F];
+        encoded_data[j++] = base64_table[triple & 0x3F];
+    }
+
+    for (int i = 0; i < (3 - (input_length % 3)) % 3; i++) {
+        encoded_data[output_length - 1 - i] = '=';
+    }
+
+    encoded_data[output_length] = '\0';
+    return encoded_data;
+}
+
 char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
     char *ciphertext;
@@ -177,8 +211,57 @@ char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     printState(state);
 
-    // ENCRYPTION AND FINALIZATION
-    // RebelNightmare's task here>
+    // ENCRYPTION 
+
+    uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext);
+    uint16_t plaintext_numblocks = getNumBlocks(plaintext);
+    uint8_t lastPlaintextBlockLength = (strlen(plaintext) % BLOCK_SIZE);
+    uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
+    
+    printf("numblocks: %d\n",plaintext_numblocks);
+
+    for(int i = 0; i < plaintext_numblocks; i++){   // as many rounds as the number of blocks
+        ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0];    // xoring plaintext and first block of state
+        state[0] = ciphertextInBlocks[i];   // state is updated
+        if(i < plaintext_numblocks - 1){    // process after last block is different
+            printf("permutation!\n");
+            pbox(state,B,1);    // state goes through the p-box
+        }
+        printState(state);
+    }
+
+    /*
+    printf("\n\n now ciphertext:\n");
+
+    for(int i = 0; i < plaintext_numblocks; i++){
+        printf("%lx\n",ciphertextInBlocks[i]);
+    }
+    */
+    
+    // please kill me
+
+    ciphertext = (char *)calloc(plaintext_numblocks * sizeof(uint64_t), sizeof(char));
+
+    // copy elements from ciphertextInBlocks to ciphertext
+    for(int i = 0; i < plaintext_numblocks; i++){
+        memcpy(ciphertext + i * sizeof(uint64_t), (char *)&ciphertextInBlocks[i], sizeof(uint64_t));
+    }
+
+    // truncating last bits
+    if(lastPlaintextBlockLength){
+        uint8_t toRemove = BLOCK_SIZE - lastPlaintextBlockLength;
+        printf("to remove: %d\n", toRemove);
+        ciphertext[strlen(ciphertext)-toRemove] = '\0';
+    }
+
+    printf("after: %ld\n",strlen(ciphertext));
+    ciphertext = base64_encode((const unsigned char *)ciphertext, strlen(ciphertext));
+    printf("ciphertext: %s\n", ciphertext);
+
+
+    // FINALISATION
+
+
 
     return ciphertext;
 }
