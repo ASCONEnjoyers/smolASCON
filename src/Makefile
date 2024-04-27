@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -g
 
 # Source files
-SRCS = main.c ascon128.c
+SRCS = main.c ascon128.c utils.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)

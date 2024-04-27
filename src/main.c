@@ -5,7 +5,7 @@
 int main()
 {
 
-    char plaintext[500] = {0};
+    char plaintext[500];
     char associated[500] = {0};
 
     while (1)
@@ -13,8 +13,15 @@ int main()
         char key[16] = {0};
         char nonce[16] = {0};
 
-        char *ciphertext = encrypt(plaintext, associated, key, nonce);
+        scanf("%s", plaintext);
 
-        return 0;
+        char *ciphertext = encrypt(plaintext, associated, key, nonce);
+        printf("Ciphertext> %s\n", ciphertext);
+
+        char *m = decrypt(ciphertext, associated, key, nonce);
+
+        printf("Plaintext> %s\n\n", m);
     }
+
+    return 0;
 }

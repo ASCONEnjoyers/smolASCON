@@ -7,3 +7,4 @@
 #define B 6
 
 char *encrypt(char *plaintext, char *associated, char *key, char *nonce);
+char *decrypt(char *ciphertext, char *associated, char *key, char *nonce);
