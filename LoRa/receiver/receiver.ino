@@ -65,6 +65,8 @@ void setup() {
 
   Serial.println("LoRa init succeeded.");
 
+  Serial.println("Listening for packets...");
+
 }
 
 void loop() {
@@ -74,7 +76,7 @@ void loop() {
 
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    Serial.print("Received packet: ");
+    Serial.print("\n\nReceived packet: ");
 
     // Read packet
     while (LoRa.available()) {
@@ -89,14 +91,14 @@ void loop() {
     String received = String(m);
     String receivedNonce = received.substring(0, 16);
     if (receivedNonce.equals(String(nonce))) {
-      Serial.println("Sending ciphertext...");
+      delay(1000);
       LoRa.beginPacket();
-      LoRa.print("ok");
+      LoRa.print(encrypt("ok", associated, key, nonce));
       LoRa.endPacket();
-      Serial.println("Packet sent!");
+      Serial.println("ACK sent!");
+      Serial.println("Listening for packets...");
+      *nonce += 1;
     }
-
-    strcpy(nonce, receivedNonce.c_str());
     free(m);
   }
 }
@@ -267,7 +269,7 @@ uint64_t *generateEntranceState(uint64_t *K, uint64_t *N) // 128 bit key, 128 bi
   state[3] = N[0];                          // first 64 bits of nonce
   state[4] = N[1];                          // last 64 bits of nonce
   // S = IV || K || N
-  printState(state);
+  //printState(state);
   return state; // and that's it
 }
 
@@ -332,7 +334,7 @@ uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase
 {
   uint64_t *state = generateEntranceState(key, nonce);
 
-  printState(state);
+  //printState(state);
 
   state = pbox(state, A, 0);
   state[3] ^= key[0];

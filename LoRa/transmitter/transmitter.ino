@@ -74,7 +74,9 @@ void loop() {
   if (status == 0) { // transmitter
     char tosend[MAX_STRING_LENGTH];
     sprintf(tosend, "%s....%s", nonce, plaintext);
-    char *ciphertext = encrypt(plaintext, associated, key, nonce);
+    char *ciphertext = encrypt(tosend, associated, key, nonce);
+    Serial.print("\n\nSending: ");
+    Serial.println(tosend);
     Serial.print("Ciphertext: ");
     Serial.println(ciphertext);
 
@@ -300,7 +302,7 @@ uint64_t *generateEntranceState(uint64_t *K, uint64_t *N) // 128 bit key, 128 bi
   state[3] = N[0];                          // first 64 bits of nonce
   state[4] = N[1];                          // last 64 bits of nonce
   // S = IV || K || N
-  printState(state);
+  //printState(state);
   return state; // and that's it
 }
 
@@ -365,7 +367,7 @@ uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase
 {
   uint64_t *state = generateEntranceState(key, nonce);
 
-  printState(state);
+  //printState(state);
 
   state = pbox(state, A, 0);
   state[3] ^= key[0];
