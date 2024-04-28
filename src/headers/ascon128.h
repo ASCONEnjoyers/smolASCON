@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #define KEY_SIZE 128
 #define NONCE_SIZE 64
 #define BLOCK_SIZE 64

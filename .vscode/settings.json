@@ -5,6 +5,7 @@
         "utils.h": "c",
         "ascon128.h": "c",
         "stdlib.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "math.h": "c"
     }
 }

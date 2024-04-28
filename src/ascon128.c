@@ -146,14 +146,15 @@ char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
         state[0] = ciphertextInBlocks[i];                        // state is updated
         if (i < plaintext_numblocks - 1)
         { // process after last block is different
-            // printf("permutation!\n");
+            //printf("permutation!\n");
             pbox(state, B, 1); // state goes through the p-box
         }
         // printState(state);
     }
 
     ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
-    ciphertext = base64_encode((const unsigned char *)ciphertext, strlen(plaintext));
+    ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
+    printf("ciphertext length: %d\n", plaintextLength);
 
     // FINALIZATION
 
@@ -174,12 +175,14 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
     // ASSOCIATED DATA MANAGEMENT
     if (strlen(associated))
     { // if there is any associated date
+        //printf("associated data!!!\n");
         state = processAssociated(associated, state);
     }
 
     // DECRYPTION
+    uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
+
     ciphertext = base64_decode(ciphertext);
-    uint16_t ciphertextLength = strlen(ciphertext);
     printf("ciphertext length: %d\n", ciphertextLength);
     uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext);
     uint16_t ciphertext_numblocks = getNumBlocks(ciphertext);
