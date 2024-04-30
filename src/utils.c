@@ -30,6 +30,16 @@ uint64_t *splitDataIn64bitBlock(char *data) // split data in 64 bit blocks and a
     return blocks;
 }
 
+uint64_t *divideKeyIntoBlocks(char *key)
+{
+    uint16_t len = strlen(key);
+    uint8_t numbits = 320 - BLOCK_SIZE;   // how many bits will the key be expanded with zeros to
+    uint64_t *key_into_blocks = calloc(4,sizeof(uint64_t));
+
+    memcpy(key_into_blocks,key,len);    // copying key value, the rest is 0 thanks to calloc
+    return key_into_blocks;
+}
+
 char *getStringFrom64bitBlocks(uint64_t *blocks, uint16_t strLength)
 {
     char *res = (char *)calloc(strLength + 1, sizeof(char));

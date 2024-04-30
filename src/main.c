@@ -16,10 +16,13 @@ int main()
         scanf("%s", plaintext);
         scanf("%s", associated);
 
-        char *ciphertext = encrypt(plaintext, associated, key, nonce);
+        ascon_t *ascon = encrypt(plaintext, associated, key, nonce);
+
         printf("Plaintext> %s\n", plaintext);
         printf("Associated> %s\n", associated);
-        printf("Ciphertext> %s\n", ciphertext);
+        //printf("Ciphertext> %s\n", ciphertext);
+
+        char *ciphertext = "";
 
         char *m = decrypt(ciphertext, associated, key, nonce);
 

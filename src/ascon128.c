@@ -1,4 +1,5 @@
 #include "headers/utils.h"
+#include "headers/ascon128.h"
 
 #define RROTATE(state, l) ((state >> l) ^ (state << (64 - l))) // ROTATE right
 
@@ -119,7 +120,7 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
     return state;
 }
 
-char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
+ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
     char *ciphertext;
     uint64_t *blockKey = splitDataIn64bitBlock(key);
@@ -158,8 +159,25 @@ char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     // FINALIZATION
 
+    uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
+    for(int i = 0; i < 3; i++){
+        state[i+1] ^= key_into_blocks[i];   // updating state
+    }
+
+    pbox(state,A,0);
+
+    uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+    char *tag = (char *)calloc(2, sizeof(uint64_t));
+
+    tag_in_blocks[0] = state[3] ^ key_into_blocks[0];   // last 128 bits of state are xored with 128 bit key
+    tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
+
+    memcpy(tag,tag_in_blocks,2*sizeof(uint64_t));
+
+    ascon_t ascon = {ciphertext,tag};
+
     // todo
-    return ciphertext;
+    return &ascon;
 }
 
 char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
