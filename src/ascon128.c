@@ -227,3 +227,10 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
     // todo
     return plaintext;
 }
+
+void incrementNonce(char *nonce)
+{
+    *((uint64_t *)nonce + 1) += 1;
+    if (*((uint64_t *)nonce + 1) == 0)
+        *((uint64_t *)nonce) += 1;
+}

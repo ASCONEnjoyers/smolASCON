@@ -11,3 +11,4 @@ typedef struct {
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
 char *decrypt(char *ciphertext, char *associated, char *key, char *nonce);
+void incrementNonce(char *nonce);

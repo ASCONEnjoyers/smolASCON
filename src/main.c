@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include "headers/ascon128.h"
 
 int main()
@@ -8,7 +9,7 @@ int main()
     char associated[500] = {0};
 
     char key[17] = "antaniantani1234";
-    char nonce[17] = "mntaniantani1234";
+    char nonce[17] = "antaniantani1234";
 
     while (1)
     {
@@ -26,8 +27,8 @@ int main()
         char *m = decrypt(ascon->ciphertext, associated, key, nonce);
 
         printf("Decrypted plaintext> %s\n\n", m);
-        printf("Nonce used> %32x\n\n", *nonce);
-        *nonce += 1;
+        printf("Nonce used> %lx%lx\n\n", *((uint64_t *)nonce), *((uint64_t *)nonce + 1));
+        incrementNonce(nonce);
     }
 
     return 0;
