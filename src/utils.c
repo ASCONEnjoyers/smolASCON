@@ -1,4 +1,5 @@
 #include "headers/utils.h"
+#include "headers/ascon128.h"
 
 void printState(uint64_t *state)
 {

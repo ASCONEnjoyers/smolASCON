@@ -1,4 +1,3 @@
-#include "ascon128.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>

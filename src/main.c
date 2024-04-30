@@ -8,7 +8,7 @@ int main()
     char associated[500] = {0};
 
     char key[17] = "antaniantani1234";
-    char nonce[16] = "mntaniantani1234";
+    char nonce[17] = "mntaniantani1234";
 
     while (1)
     {
