@@ -147,7 +147,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
         state[0] = ciphertextInBlocks[i];                        // state is updated
         if (i < plaintext_numblocks - 1)
         { // process after last block is different
-            //printf("permutation!\n");
+            // printf("permutation!\n");
             pbox(state, B, 1); // state goes through the p-box
         }
         // printState(state);
@@ -160,24 +160,29 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     // FINALIZATION
 
     uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
-    for(int i = 0; i < 3; i++){
-        state[i+1] ^= key_into_blocks[i];   // updating state
+    for (int i = 0; i < 3; i++)
+    {
+        state[i + 1] ^= key_into_blocks[i]; // updating state
     }
 
-    pbox(state,A,0);
+    pbox(state, A, 0);
 
     uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
     char *tag = (char *)calloc(2, sizeof(uint64_t));
 
-    tag_in_blocks[0] = state[3] ^ key_into_blocks[0];   // last 128 bits of state are xored with 128 bit key
+    tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
     tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
 
-    memcpy(tag,tag_in_blocks,2*sizeof(uint64_t));
+    memcpy(tag, tag_in_blocks, 2 * sizeof(uint64_t));
 
-    ascon_t ascon = {ciphertext,tag};
+    ascon_t *ascon = (ascon_t *)calloc(1, sizeof(ascon_t));
+    ascon->ciphertext = (char *)calloc(strlen(plaintext), sizeof(char));
+    ascon->tag = (char *)calloc(128, sizeof(char));
 
-    // todo
-    return &ascon;
+    strcpy(ascon->ciphertext, ciphertext);
+    strcpy(ascon->tag, tag);
+
+    return ascon;
 }
 
 char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
@@ -193,7 +198,7 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
     // ASSOCIATED DATA MANAGEMENT
     if (strlen(associated))
     { // if there is any associated date
-        //printf("associated data!!!\n");
+        // printf("associated data!!!\n");
         state = processAssociated(associated, state);
     }
 

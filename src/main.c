@@ -20,11 +20,10 @@ int main()
 
         printf("Plaintext> %s\n", plaintext);
         printf("Associated> %s\n", associated);
-        //printf("Ciphertext> %s\n", ciphertext);
+        printf("Ciphertext> %s\n", ascon->ciphertext);
+        printf("Tag: %s\n", ascon->tag);
 
-        char *ciphertext = "";
-
-        char *m = decrypt(ciphertext, associated, key, nonce);
+        char *m = decrypt(ascon->ciphertext, associated, key, nonce);
 
         printf("Decrypted plaintext> %s\n\n", m);
         printf("Nonce used> %32x\n\n", *nonce);
