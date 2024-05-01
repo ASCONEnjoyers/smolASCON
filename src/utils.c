@@ -10,9 +10,10 @@ void printState(uint64_t *state)
     printf("\n");
 }
 
-uint16_t getNumBlocks(char *data)
+uint16_t getNumBlocks(char *data, uint8_t base)
 {
-    uint16_t numblocks = (stringLengthFromB64(data) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    uint16_t len = base == 64 ? stringLengthFromB64(data) : strlen(data);
+    uint16_t numblocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t);
     return numblocks;
 }
 
@@ -117,7 +118,7 @@ char *base64_encode(const unsigned char *data, size_t input_length)
     {
         encoded_data[output_length - 1 - i] = '=';
     }
-
+    
     encoded_data[output_length] = '\0';
     return encoded_data;
 }

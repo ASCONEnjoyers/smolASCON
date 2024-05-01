@@ -123,6 +123,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
     uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
+
     // INITIALIZATION
     uint64_t *state = initialization(blockKey, blockNonce);
 
@@ -135,7 +136,12 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     // ENCRYPTION
     uint16_t plaintextLength = strlen(plaintext);
     uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
-    uint16_t plaintext_numblocks = getNumBlocks(plaintext);
+    printf("numblocks: %d\n", getNumBlocks(plaintext, 10));
+    for(int i = 0; i < getNumBlocks(plaintext, 10); i++){
+        printf("%lx\n", plaintextInBlocks[i]);
+    }
+
+    uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
     uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
     for (int i = 0; i < plaintext_numblocks; i++)
@@ -147,6 +153,8 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
             pbox(state, B, 1); // state goes through the p-box
         }
     }
+
+    printf("plaintext length: %ld\n", plaintextLength);
     ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
     ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
     // FINALIZATION
@@ -195,7 +203,7 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
 
     // DECRYPTION
     uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
-    uint16_t ciphertext_numblocks = getNumBlocks(ciphertext);
+    uint16_t ciphertext_numblocks = getNumBlocks(ciphertext, 64);
     ciphertext = base64_decode(ciphertext);
     uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext, ciphertextLength);
     uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
