@@ -12,20 +12,20 @@ void printState(uint64_t *state)
 
 uint16_t getNumBlocks(char *data)
 {
-    uint16_t numblocks = (strlen(data) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    uint16_t numblocks = (stringLengthFromB64(data) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
     return numblocks;
 }
 
-uint64_t *splitDataIn64bitBlock(char *data) // split data in 64 bit blocks and add padding
+uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data in 64 bit blocks and add padding
 {
-    uint16_t len = strlen(data);
-    uint16_t num_blocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
+
+    uint16_t num_blocks = (dataLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
     uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
 
-    memcpy(blocks, data, len);
-    if (len % 8)
+    memcpy(blocks, data, dataLength);
+    if (dataLength % 8)
     {
-        blocks[num_blocks - 1] |= (1ULL << (len * 8 % BLOCK_SIZE));
+        blocks[num_blocks - 1] |= (1ULL << (dataLength * 8 % BLOCK_SIZE));
     }
 
     return blocks;

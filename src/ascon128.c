@@ -97,23 +97,20 @@ uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase
 
 uint64_t *processAssociated(char *associated, uint64_t *state)
 {
-    uint64_t *blockAssociated = splitDataIn64bitBlock(associated);
-    uint16_t numBlocks = (strlen(associated) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    uint16_t associatedLength = strlen(associated);
+    uint64_t *blockAssociated = splitDataIn64bitBlock(associated, associatedLength);
+    uint16_t numBlocks = (associatedLength + sizeof(uint64_t) - 1) / sizeof(uint64_t);
     if (numBlocks == 1) // if there is only one associated data block
     {
-        // printf("only associated data block 0\n");
         state[0] ^= blockAssociated[0];
         pbox(state, B, 1); // pboxing, as the diagram shows
-        // printState(state);
     }
     else
     {
         for (uint16_t i = 0; i < numBlocks; i++)
         { // for each generated associated data block
-            // printf("Associated data block %d\n", i);
             state[0] ^= blockAssociated[i]; // xoring the associated date
             pbox(state, B, 1);              // pboxing, as the diagram shows
-            // printState(state);
         }
     }
     state[4] ^= 1ULL; // final xor with 0*||1
@@ -123,8 +120,8 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
     char *ciphertext;
-    uint64_t *blockKey = splitDataIn64bitBlock(key);
-    uint64_t *blockNonce = splitDataIn64bitBlock(nonce);
+    uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
+    uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
     // INITIALIZATION
     uint64_t *state = initialization(blockKey, blockNonce);
@@ -137,26 +134,21 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     // ENCRYPTION
     uint16_t plaintextLength = strlen(plaintext);
-    uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext);
+    uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
     uint16_t plaintext_numblocks = getNumBlocks(plaintext);
     uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
     for (int i = 0; i < plaintext_numblocks; i++)
-    {                                                            // as many rounds as the number of blocks
+    { // as many rounds as the number of blocks
         ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
-        state[0] = ciphertextInBlocks[i];                        // state is updated
+        state[0] = ciphertextInBlocks[i]; // state is updated
         if (i < plaintext_numblocks - 1)
         { // process after last block is different
-            // printf("permutation!\n");
             pbox(state, B, 1); // state goes through the p-box
         }
-        // printState(state);
     }
-
     ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
     ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
-    printf("ciphertext length: %d\n", plaintextLength);
-
     // FINALIZATION
 
     uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
@@ -189,8 +181,8 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
 {
 
     char *plaintext;
-    uint64_t *blockKey = splitDataIn64bitBlock(key);
-    uint64_t *blockNonce = splitDataIn64bitBlock(nonce);
+    uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
+    uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
     // INITIALIZATION
     uint64_t *state = initialization(blockKey, blockNonce);
@@ -198,23 +190,19 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
     // ASSOCIATED DATA MANAGEMENT
     if (strlen(associated))
     { // if there is any associated date
-        // printf("associated data!!!\n");
         state = processAssociated(associated, state);
     }
 
     // DECRYPTION
     uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
-
-    ciphertext = base64_decode(ciphertext);
-    printf("ciphertext length: %d\n", ciphertextLength);
-    uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext);
     uint16_t ciphertext_numblocks = getNumBlocks(ciphertext);
+    ciphertext = base64_decode(ciphertext);
+    uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext, ciphertextLength);
     uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
-
     for (int i = 0; i < ciphertext_numblocks; i++)
-    {                                                            // as many rounds as the number of blocks
+    { // as many rounds as the number of blocks
         plaintextInBlocks[i] = ciphertextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
-        state[0] = ciphertextInBlocks[i];                        // state is updated
+        state[0] = ciphertextInBlocks[i]; // state is updated
         if (i < ciphertext_numblocks - 1)
         {                      // process after last block is different
             pbox(state, B, 1); // state goes through the p-box

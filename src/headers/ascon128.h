@@ -1,5 +1,5 @@
 #define KEY_SIZE 128
-#define NONCE_SIZE 64
+#define NONCE_SIZE 128
 #define BLOCK_SIZE 64
 #define A 12
 #define B 6

@@ -124,7 +124,8 @@ void loop() {
       if (!strcmp(m, "ok")) {
         status = 0; // now transmitting again
         *nonce += 1; // updating the nonce
-        Serial.println("now transmitting again...");
+        Serial.println("RECEIVED!! now sleep 3s and transmitting again...");
+        delay(3000);
       }
       else {
         Serial.println("Not an ACK");
