@@ -7,18 +7,18 @@
 #include <stdlib.h>
 
 // --- LoRa
-#define LORA_SCK 14   // GPIO14 (D5) - SCK
-#define LORA_MISO 12  // GPIO12 (D6) - MISO
-#define LORA_MOSI 13  // GPIO13 (D7) - MOSI
-#define LORA_SS 15    // GPIO15 (D8) - SS
-#define LORA_RST 4    // GPIO4 (D2) - RST
-#define LORA_DI0 5    // GPIO5 (D1) - DI0
+#define LORA_SCK 14  // GPIO14 (D5) - SCK
+#define LORA_MISO 12 // GPIO12 (D6) - MISO
+#define LORA_MOSI 13 // GPIO13 (D7) - MOSI
+#define LORA_SS 15   // GPIO15 (D8) - SS
+#define LORA_RST 4   // GPIO4 (D2) - RST
+#define LORA_DI0 5   // GPIO5 (D1) - DI0
 // ----
 
 // --- ASCON 128
 #define MAX_STRING_LENGTH 500
 #define KEY_SIZE 128
-#define NONCE_SIZE 64
+#define NONCE_SIZE 128
 #define BLOCK_SIZE 64
 #define A 12
 #define B 6
@@ -27,9 +27,15 @@
 
 uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}; // adding constants
 
+typedef struct
+{
+  uint64_t *ciphertext;
+  uint64_t *tag;
+  uint16_t originalLength;
+} ascon_t;
 
-char *encrypt(char *plaintext, char *associated, char *key, char *nonce);
-char *decrypt(char *ciphertext, char *associated, char *key, char *nonce);
+ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
+char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce);
 
 char plaintext[MAX_STRING_LENGTH] = "antani";
 char associated[MAX_STRING_LENGTH] = {0};
@@ -42,11 +48,11 @@ char incomingChar;
 
 int status = 0; // 0 = transmitter, 1= waiting ACK
 
-
 unsigned long timeoutDuration = 5000; // Timeout duration in milliseconds
-unsigned long startTime; // Variable to store the start time of the operation
+unsigned long startTime;              // Variable to store the start time of the operation
 
-bool isTimedOut() {
+bool isTimedOut()
+{
   // Calculate the current duration of the operation
   unsigned long currentDuration = millis() - startTime;
 
@@ -54,42 +60,49 @@ bool isTimedOut() {
   return currentDuration >= timeoutDuration;
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  while (!Serial);
+  while (!Serial)
+    ;
 
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DI0);
 
-  if (!LoRa.begin(433E6)) { // Change frequency to 433 MHz
+  if (!LoRa.begin(433E6))
+  { // Change frequency to 433 MHz
     Serial.println("LoRa init failed. Check your connections.");
-    while (1);
+    while (1)
+      ;
   }
 
   Serial.println("LoRa init succeeded.");
-
 }
 
-void loop() {
+void loop()
+{
   // Send a packet
-  if (status == 0) { // transmitter
+  if (status == 0)
+  { // transmitter
     char tosend[MAX_STRING_LENGTH];
     sprintf(tosend, "%s....%s", nonce, plaintext);
-    char *ciphertext = encrypt(tosend, associated, key, nonce);
-    Serial.print("\n\nSending: ");
+    ascon_t *ascon = encrypt(tosend, associated, key, nonce);
+    Serial.print("Sending: ");
+    Serial.println(tosend);
+    sprintf(tosend, "%d.%s.%s", strlen(plaintext), ascon->ciphertext, ascon->tag);
+    Serial.print("\n\nSending final: ");
     Serial.println(tosend);
     Serial.print("Ciphertext: ");
-    Serial.println(ciphertext);
+    Serial.println(ascon->ciphertext);
 
-    char *m = decrypt(ciphertext, associated, key, nonce);
+    char *m = decrypt(ascon, associated, key, nonce);
     Serial.print("decrypted: ");
     Serial.println(m);
 
     Serial.println("Sending ciphertext...");
     LoRa.beginPacket();
-    LoRa.print(ciphertext);
+    LoRa.print(tosend);
     LoRa.endPacket();
     Serial.println("Packet sent!");
-
 
     free(m);
 
@@ -97,9 +110,11 @@ void loop() {
     status = 1;
     Serial.println("Now waiting for ACK...");
   }
-  else { // waiting transmission ACK
+  else
+  { // waiting transmission ACK
 
-    if (isTimedOut()) {
+    if (isTimedOut())
+    {
       Serial.println("Timeout occurred!");
       status = 0; // retransmit message or retransmit ACK
     }
@@ -108,11 +123,13 @@ void loop() {
     int packetIndex = 0;
 
     int packetSize = LoRa.parsePacket();
-    if (packetSize) {
+    if (packetSize)
+    {
       Serial.print("Received packet: ");
 
       // Read packet
-      while (LoRa.available()) {
+      while (LoRa.available())
+      {
         receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
       }
       receivedPayload[packetIndex] = '\0'; // Null-terminate the string
@@ -121,16 +138,17 @@ void loop() {
       char *m = decrypt(receivedPayload, associated, key, nonce);
       Serial.print("Received decrypted message: ");
       Serial.println(m);
-      if (!strcmp(m, "ok")) {
-        status = 0; // now transmitting again
+      if (!strcmp(m, "ok"))
+      {
+        status = 0;  // now transmitting again
         *nonce += 1; // updating the nonce
         Serial.println("RECEIVED!! now sleep 3s and transmitting again...");
         delay(3000);
       }
-      else {
+      else
+      {
         Serial.println("Not an ACK");
       }
-
     }
 
     delay(500);
@@ -139,39 +157,42 @@ void loop() {
 
 void printState(uint64_t *state)
 {
-
-  Serial.println("\n");
   for (int i = 0; i < 5; i++)
   {
-    Serial.print("x");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.print((uint32_t)state[i] >> 32, HEX);
-    Serial.print((uint32_t)state[i], HEX);
-    Serial.print("\n");
+    printf("x%d> %16lx\n", i, state[i]);
   }
-  Serial.print("\n");
+  printf("\n");
 }
 
-uint16_t getNumBlocks(char *data)
+uint16_t getNumBlocks(char *data, uint8_t base)
 {
-  uint16_t numblocks = (strlen(data) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+  uint16_t len = base == 64 ? stringLengthFromB64(data) : strlen(data);
+  uint16_t numblocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t);
   return numblocks;
 }
 
-uint64_t *splitDataIn64bitBlock(char *data) // split data in 64 bit blocks and add padding
+uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data in 64 bit blocks and add padding
 {
-  uint16_t len = strlen(data);
-  uint16_t num_blocks = (len + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
-  uint64_t *blocks = (uint64_t *)calloc(num_blocks, sizeof(uint64_t));
 
-  memcpy(blocks, data, strlen(data));
-  if (len % 8)
+  uint16_t num_blocks = (dataLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
+  uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
+
+  memcpy(blocks, data, dataLength);
+  if (dataLength % 8)
   {
-    blocks[num_blocks - 1] |= (1ULL << (len * 8 % BLOCK_SIZE));
+    blocks[num_blocks - 1] |= (1ULL << (dataLength * 8 % BLOCK_SIZE));
   }
 
   return blocks;
+}
+
+uint64_t *divideKeyIntoBlocks(char *key)
+{
+  uint16_t len = strlen(key);
+  uint64_t *key_into_blocks = calloc(4, sizeof(uint64_t));
+
+  memcpy(key_into_blocks, key, len); // copying key value, the rest is 0 thanks to calloc
+  return key_into_blocks;
 }
 
 char *getStringFrom64bitBlocks(uint64_t *blocks, uint16_t strLength)
@@ -190,15 +211,15 @@ int cceil(double x)
   int int_part = (int)x; // Extract the integer part
 
   if (x == (double)int_part)
-  { // If x is already an integer
+  {           // If x is already an integer
     return x; // Return x
   }
   else if (x < 0)
-  { // If x is negative
+  {                  // If x is negative
     return int_part; // Return the integer part
   }
   else
-  { // If x is positive
+  {                      // If x is positive
     return int_part + 1; // Return the integer part + 1
   }
 }
@@ -229,7 +250,7 @@ char *base64_encode(const unsigned char *data, size_t input_length)
   const char base64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   uint64_t output_length = 4 * ((input_length + 2) / 3);
-  char *encoded_data = (char *) malloc(output_length + 1);
+  char *encoded_data = malloc(output_length + 1);
   if (encoded_data == NULL)
     return NULL;
 
@@ -260,7 +281,7 @@ char *base64_decode(const char *data)
 {
   uint16_t in_len = strlen(data);
   uint16_t out_len = stringLengthFromB64(data);
-  char *decoded_data = (char *) malloc(out_len + 1); // +1 for the null-terminator
+  char *decoded_data = malloc(out_len + 1); // +1 for the null-terminator
   if (!decoded_data)
     return NULL;
 
@@ -288,6 +309,7 @@ char *base64_decode(const char *data)
 uint64_t *generateIV(uint8_t r, uint8_t a, uint8_t b)
 {
   uint64_t *buffer = (uint64_t *)calloc(1, sizeof(uint64_t)); // 64 bit buffer
+
   // Generate IV
   *buffer = ((((((*buffer | 128) << 8) | r) << 8) | a) << 8 | b) << 32; //  k || r || a || b || 0^{160-k}
   return buffer;
@@ -303,16 +325,15 @@ uint64_t *generateEntranceState(uint64_t *K, uint64_t *N) // 128 bit key, 128 bi
   state[3] = N[0];                          // first 64 bits of nonce
   state[4] = N[1];                          // last 64 bits of nonce
   // S = IV || K || N
-  //printState(state);
   return state; // and that's it
 }
 
 uint64_t *doPermutation(uint64_t *state, uint8_t roundNumber, uint8_t type)
 {
-  uint64_t temp[5] = {0};                                   // temporary state to build the sbox
-  if (type == 0)                                            // a-type round
+  uint64_t temp[5] = {0};                                 // temporary state to build the sbox
+  if (type == 0)                                          // a-type round
     state[2] ^= (uint64_t)constants[roundNumber];         // add round constant to key
-  else                                                      // b-type round
+  else                                                    // b-type round
     state[2] ^= (uint64_t)constants[roundNumber + A - B]; // add round constant to key
 
   // Substitution layer
@@ -368,8 +389,6 @@ uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase
 {
   uint64_t *state = generateEntranceState(key, nonce);
 
-  //printState(state);
-
   state = pbox(state, A, 0);
   state[3] ^= key[0];
   state[4] ^= key[1];
@@ -379,35 +398,30 @@ uint64_t *initialization(uint64_t *key, uint64_t *nonce) // initialization phase
 
 uint64_t *processAssociated(char *associated, uint64_t *state)
 {
-  uint64_t *blockAssociated = splitDataIn64bitBlock(associated);
-  uint16_t numBlocks = (strlen(associated) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+  uint16_t associatedLength = strlen(associated);
+  uint64_t *blockAssociated = splitDataIn64bitBlock(associated, associatedLength);
+  uint16_t numBlocks = (associatedLength + sizeof(uint64_t) - 1) / sizeof(uint64_t);
   if (numBlocks == 1) // if there is only one associated data block
   {
-    // printf("only associated data block 0\n");
     state[0] ^= blockAssociated[0];
     pbox(state, B, 1); // pboxing, as the diagram shows
-    // printState(state);
   }
   else
   {
     for (uint16_t i = 0; i < numBlocks; i++)
-    { // for each generated associated data block
-      // printf("Associated data block %d\n", i);
+    {                                 // for each generated associated data block
       state[0] ^= blockAssociated[i]; // xoring the associated date
       pbox(state, B, 1);              // pboxing, as the diagram shows
-      // printState(state);
     }
   }
   state[4] ^= 1ULL; // final xor with 0*||1
   return state;
 }
 
-char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
+ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
-  char *ciphertext;
-  uint64_t *blockKey = splitDataIn64bitBlock(key);
-  uint64_t *blockNonce = splitDataIn64bitBlock(nonce);
-
+  uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
+  uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
   // INITIALIZATION
   uint64_t *state = initialization(blockKey, blockNonce);
@@ -420,39 +434,55 @@ char *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
   // ENCRYPTION
   uint16_t plaintextLength = strlen(plaintext);
-  uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext);
-  uint16_t plaintext_numblocks = getNumBlocks(plaintext);
+  uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
+
+  uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
+  printf("plaintext blocks: %d\n", plaintext_numblocks);
   uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
   for (int i = 0; i < plaintext_numblocks; i++)
-  { // as many rounds as the number of blocks
+  {                                                          // as many rounds as the number of blocks
     ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < plaintext_numblocks - 1)
-    { // process after last block is different
-      //printf("permutation!\n");
+    {                    // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
-    // printState(state);
   }
-
-  ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
-  ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
-  Serial.println("ciphertext length> ");
-  Serial.println(plaintextLength);
 
   // FINALIZATION
 
-  // todo
-  return ciphertext;
+  uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
+  for (int i = 0; i < 3; i++)
+  {
+    state[i + 1] ^= key_into_blocks[i]; // updating state
+  }
+
+  pbox(state, A, 0);
+
+  uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+  char *tag = (char *)calloc(2, sizeof(uint64_t));
+
+  tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
+  tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
+
+  memcpy(tag, tag_in_blocks, 2 * sizeof(uint64_t));
+
+  ascon_t *ascon = (ascon_t *)calloc(1, sizeof(ascon_t));
+
+  ascon->ciphertext = ciphertextInBlocks;
+  ascon->tag = tag_in_blocks;
+  ascon->originalLength = plaintextLength;
+
+  return ascon;
 }
 
-char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
+char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 {
 
   char *plaintext;
-  uint64_t *blockKey = splitDataIn64bitBlock(key);
-  uint64_t *blockNonce = splitDataIn64bitBlock(nonce);
+  uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
+  uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
   // INITIALIZATION
   uint64_t *state = initialization(blockKey, blockNonce);
@@ -460,32 +490,41 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
   // ASSOCIATED DATA MANAGEMENT
   if (strlen(associated))
   { // if there is any associated date
-    //printf("associated data!!!\n");
     state = processAssociated(associated, state);
   }
 
   // DECRYPTION
-  uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
-
-  ciphertext = base64_decode(ciphertext);
-  printf("ciphertext length: %d\n", ciphertextLength);
-  uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext);
-  uint16_t ciphertext_numblocks = getNumBlocks(ciphertext);
+  printf("original length: %d\n", ascon->originalLength);
+  uint16_t ciphertext_numblocks = (ascon->originalLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
+  printf("ciphertext blocks: %d\n", ciphertext_numblocks);
+  uint64_t *ciphertextInBlocks = ascon->ciphertext;
   uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
-
   for (int i = 0; i < ciphertext_numblocks; i++)
-  { // as many rounds as the number of blocks
+  {                                                          // as many rounds as the number of blocks
     plaintextInBlocks[i] = ciphertextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < ciphertext_numblocks - 1)
-    { // process after last block is different
+    {                    // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
   }
 
-  plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ciphertextLength);
+  plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ascon->originalLength);
 
   // FINALIZATION
   // todo
   return plaintext;
+}
+
+void incrementNonce(char *nonce)
+{
+  *((uint64_t *)nonce + 1) += 1;
+  if (*((uint64_t *)nonce + 1) == 0)
+    *((uint64_t *)nonce) += 1;
+}
+
+char *getPrintableText(uint64_t *blocks, uint16_t length)
+{
+  char *res = base64_encode((const unsigned char *)getStringFrom64bitBlocks(blocks, length), length);
+  return res;
 }
