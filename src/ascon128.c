@@ -144,7 +144,8 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     for (int i = 0; i < plaintext_numblocks; i++)
     { // as many rounds as the number of blocks
         ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
-        printf("cipher block: %lx\n", ciphertextInBlocks[i]);
+        //printf("plaintext block: %lx\n", plaintextInBlocks[i]);
+        //printf("cipher block: %lx\n", ciphertextInBlocks[i]);
         state[0] = ciphertextInBlocks[i]; // state is updated
         if (i < plaintext_numblocks - 1)
         { // process after last block is different
@@ -178,6 +179,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     ascon->ciphertext = ciphertextInBlocks;
     ascon->tag = tag_in_blocks;
+    printf("plain Length: %d\n", plaintextLength);
     ascon->originalLength = plaintextLength;
 
     return ascon;
@@ -197,11 +199,14 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
     if (strlen(associated))
     { // if there is any associated date
         state = processAssociated(associated, state);
+
     }
 
     // DECRYPTION
     //uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
-    uint16_t ciphertext_numblocks = ascon->originalLength / 8;
+    printf("original length: %d\n", ascon->originalLength);
+    uint16_t ciphertext_numblocks = (ascon->originalLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
+    printf("ciphertext blocks: %d\n", ciphertext_numblocks);
     //ciphertext = base64_decode(ciphertext);
     uint64_t *ciphertextInBlocks = ascon->ciphertext;
     uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));

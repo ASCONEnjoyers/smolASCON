@@ -7,7 +7,7 @@
 int main()
 {
 
-    char plaintext[500] = "a";
+    char plaintext[500];
     char associated[500] = {0};
 
     char key[17] = "antaniantani1234";
@@ -23,10 +23,10 @@ int main()
 
         printf("Plaintext> %s\n", plaintext);
         printf("Associated> %s\n", associated);
-        printf("Ciphertext> %s\n", ascon->ciphertext);
-        printf("Tag: %s\n", ascon->tag);
+        //printf("Ciphertext> %s\n", ascon->ciphertext);
+        //printf("Tag: %s\n", ascon->tag);
 
-        char *m = decrypt(ascon->ciphertext, associated, key, nonce);
+        char *m = decrypt(ascon, associated, key, nonce);
 
 
         printf("Decrypted plaintext> %s\n\n", m);
@@ -40,13 +40,14 @@ int main()
     while(check){
         ascon_t *ascon = encrypt(plaintext, associated, key, nonce);
         //printf("Ciphertext> %s\n", ascon->ciphertext);
-        char *m = decrypt(ascon->ciphertext, associated, key, nonce);
+        char *m = decrypt(ascon, associated, key, nonce);
         //printf("Decrypted plaintext> %s\n\n", m);
         printf("Plaintext> %s\n", plaintext);
-        printf("Ciphertext> %s\n", ascon->ciphertext);
+        //printf("Ciphertext> %s\n", ascon->ciphertext);
         printf("Nonce used> %lx%lx\n\n", *((uint64_t *)nonce), *((uint64_t *)nonce + 1));
         incrementNonce(nonce);
         printf("Counter: %d\n", counter++);
+        printf("decrypted length: %d\n", strlen(m));
         if(strcmp(plaintext, m)){
             check = 0;
             printf("Ciphertext> %s\n", ascon->ciphertext);
@@ -57,7 +58,7 @@ int main()
         //free(ascon->tag);
         //free(ascon);
         //free(m);
-        strcat(plaintext, "a");
+        //strcat(plaintext, "a");
     }*/
 
     return 0;
