@@ -141,12 +141,16 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
         printf("%lx\n", plaintextInBlocks[i]);
     }
 
+
+
     uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
+    printf("plaintext blocks: %d\n", plaintext_numblocks);
     uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
     for (int i = 0; i < plaintext_numblocks; i++)
     { // as many rounds as the number of blocks
         ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
+        printf("cipher block: %lx\n", ciphertextInBlocks[i]);
         state[0] = ciphertextInBlocks[i]; // state is updated
         if (i < plaintext_numblocks - 1)
         { // process after last block is different
@@ -177,7 +181,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     ascon_t *ascon = (ascon_t *)calloc(1, sizeof(ascon_t));
     ascon->ciphertext = (char *)calloc(strlen(plaintext), sizeof(char));
-    ascon->tag = (char *)calloc(128, sizeof(char));
+    ascon->tag = (char *)calloc(17, sizeof(char));
 
     strcpy(ascon->ciphertext, ciphertext);
     strcpy(ascon->tag, tag);

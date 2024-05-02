@@ -28,6 +28,7 @@ int main()
         char *m = decrypt(ascon->ciphertext, associated, key, nonce);
 
         printf("Decrypted plaintext> %s\n\n", m);
+        printf("decrypted length: %ld\n", strlen(m));
         printf("Nonce used> %lx%lx\n\n", *((uint64_t *)nonce), *((uint64_t *)nonce + 1));
 
         incrementNonce(nonce);
