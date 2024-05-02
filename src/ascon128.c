@@ -117,6 +117,23 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
     return state;
 }
 
+uint64_t *finalize(uint64_t *state, char *key){
+    uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
+
+    for (int i = 0; i < 3; i++)
+    {
+        state[i + 1] ^= key_into_blocks[i]; // updating state
+    }
+
+    pbox(state, A, 0);
+
+    uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+    tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
+    tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
+
+    return tag_in_blocks;
+}
+
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
     uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
@@ -151,6 +168,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     // FINALIZATION
 
+    /*
     uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
     for (int i = 0; i < 3; i++)
     {
@@ -158,14 +176,19 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     }
 
     pbox(state, A, 0);
-
+    
     uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+
     char *tag = (char *)calloc(2, sizeof(uint64_t));
 
     tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
     tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
 
     memcpy(tag, tag_in_blocks, 2 * sizeof(uint64_t));
+    */
+
+    uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+    tag_in_blocks = finalize(state,key);
 
     ascon_t *ascon = (ascon_t *)calloc(1, sizeof(ascon_t));
 
@@ -211,8 +234,16 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
     plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ascon->originalLength);
 
     // FINALIZATION
-    // todo
-    return plaintext;
+    
+    uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+    tag_in_blocks = finalize(state,key);
+
+    if(tag_in_blocks[0] == ascon->tag[0] && tag_in_blocks[1] == ascon->tag[1]){     // if tag is the same
+        return plaintext;
+    } else {
+        return "the tag is not the same!";
+    }
+    
 }
 
 void incrementNonce(char *nonce)
