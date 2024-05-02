@@ -119,7 +119,7 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
-    char *ciphertext;
+    //char *ciphertext;
     uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
     uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
 
@@ -136,12 +136,6 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     // ENCRYPTION
     uint16_t plaintextLength = strlen(plaintext);
     uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
-    printf("numblocks: %d\n", getNumBlocks(plaintext, 10));
-    for(int i = 0; i < getNumBlocks(plaintext, 10); i++){
-        printf("%lx\n", plaintextInBlocks[i]);
-    }
-
-
 
     uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
     printf("plaintext blocks: %d\n", plaintext_numblocks);
@@ -158,9 +152,10 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
         }
     }
 
-    printf("plaintext length: %ld\n", plaintextLength);
-    ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
-    ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
+    //printf("plaintext length1: %ld\n", plaintextLength);
+    //ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
+
+    //ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
     // FINALIZATION
 
     uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
@@ -180,16 +175,15 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     memcpy(tag, tag_in_blocks, 2 * sizeof(uint64_t));
 
     ascon_t *ascon = (ascon_t *)calloc(1, sizeof(ascon_t));
-    ascon->ciphertext = (char *)calloc(strlen(plaintext), sizeof(char));
-    ascon->tag = (char *)calloc(17, sizeof(char));
 
-    strcpy(ascon->ciphertext, ciphertext);
-    strcpy(ascon->tag, tag);
+    ascon->ciphertext = ciphertextInBlocks;
+    ascon->tag = tag_in_blocks;
+    ascon->originalLength = plaintextLength;
 
     return ascon;
 }
 
-char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
+char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 {
 
     char *plaintext;
@@ -206,10 +200,10 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
     }
 
     // DECRYPTION
-    uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
-    uint16_t ciphertext_numblocks = getNumBlocks(ciphertext, 64);
-    ciphertext = base64_decode(ciphertext);
-    uint64_t *ciphertextInBlocks = splitDataIn64bitBlock(ciphertext, ciphertextLength);
+    //uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
+    uint16_t ciphertext_numblocks = ascon->originalLength / 8;
+    //ciphertext = base64_decode(ciphertext);
+    uint64_t *ciphertextInBlocks = ascon->ciphertext;
     uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
     for (int i = 0; i < ciphertext_numblocks; i++)
     { // as many rounds as the number of blocks
@@ -221,7 +215,7 @@ char *decrypt(char *ciphertext, char *associated, char *key, char *nonce)
         }
     }
 
-    plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ciphertextLength);
+    plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ascon->originalLength);
 
     // FINALIZATION
     // todo

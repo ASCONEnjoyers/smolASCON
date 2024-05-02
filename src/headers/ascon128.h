@@ -5,10 +5,11 @@
 #define B 6
 
 typedef struct {
-    char *ciphertext;
-    char *tag;
+    uint64_t *ciphertext;
+    uint64_t *tag;
+    uint16_t originalLength;
 } ascon_t;
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
-char *decrypt(char *ciphertext, char *associated, char *key, char *nonce);
+char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce);
 void incrementNonce(char *nonce);
