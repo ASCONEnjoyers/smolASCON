@@ -16,7 +16,8 @@ int main()
     while (1)
     {
 
-        scanf("%s", plaintext);
+        fgets(plaintext, 500, stdin);
+        plaintext[strlen(plaintext)] = 0;
         // scanf("%s", associated);
 
         ascon_t *ascon = encrypt(plaintext, associated, key, nonce);
