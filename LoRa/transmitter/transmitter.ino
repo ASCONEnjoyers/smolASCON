@@ -126,15 +126,6 @@ void loop()
 
     int packetSize = LoRa.parsePacket();
 
-    int rssi = LoRa.packetRssi();
-    int snr = LoRa.packetSnr();
-    Serial.print("RSSI: ");
-    Serial.print(rssi);
-    Serial.print(" dBm");
-    Serial.print("\tSNR: ");
-    Serial.print(snr);
-    Serial.println(" dB");
-
     if (packetSize)
     {
       Serial.print("Received packet: ");
@@ -169,14 +160,6 @@ void loop()
   }
 }
 
-void printState(uint64_t *state)
-{
-  for (int i = 0; i < 5; i++)
-  {
-    printf("x%d> %16lx\n", i, state[i]);
-  }
-  printf("\n");
-}
 
 uint16_t getNumBlocks(char *data, uint8_t base)
 {
@@ -451,7 +434,6 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
   uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
 
   uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
-  printf("plaintext blocks: %d\n", plaintext_numblocks);
   uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
   for (int i = 0; i < plaintext_numblocks; i++)
@@ -508,9 +490,7 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   }
 
   // DECRYPTION
-  printf("original length: %d\n", ascon->originalLength);
   uint16_t ciphertext_numblocks = (ascon->originalLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
-  printf("ciphertext blocks: %d\n", ciphertext_numblocks);
   uint64_t *ciphertextInBlocks = ascon->ciphertext;
   uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
   for (int i = 0; i < ciphertext_numblocks; i++)

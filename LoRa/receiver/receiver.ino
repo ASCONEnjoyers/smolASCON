@@ -47,6 +47,7 @@ char incomingChar;
 
 unsigned long timeoutDuration = 5000; // Timeout duration in milliseconds
 unsigned long startTime;              // Variable to store the start time of the operation
+uint8_t reNonce = 0; // nonce recovery test 0=no 1=yes
 
 bool isTimedOut()
 {
@@ -77,44 +78,6 @@ void setup()
   Serial.println("Listening for packets...");
 }
 
-/*
- * 
- * 
-void loop() {
-  // Send a packet
-  char receivedPayload[MAX_STRING_LENGTH];
-  int packetIndex = 0;
-
-  int packetSize = LoRa.parsePacket();
-  if (packetSize) {
-    Serial.print("\n\nReceived packet: ");
-
-    // Read packet
-    while (LoRa.available()) {
-      receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
-    }
-    receivedPayload[packetIndex] = '\0'; // Null-terminate the string
-    Serial.println(receivedPayload);
-
-    char *m = decrypt(receivedPayload, associated, key, nonce);
-    Serial.print("Received decrypted message: ");
-    Serial.println(m);
-    String received = String(m);
-    String receivedNonce = received.substring(0, 16);
-    if (receivedNonce.equals(String(nonce))) {
-      delay(1000);
-      LoRa.beginPacket();
-      LoRa.print(encrypt("ok", associated, key, nonce));
-      LoRa.endPacket();
-      Serial.println("ACK sent!");
-      Serial.println("Listening for packets...");
-      *nonce += 1;
-    }
-    free(m);
-  }
-}
- */
-
 void loop()
 {
   // Send a packet
@@ -132,9 +95,9 @@ void loop()
       receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
     }
     receivedPayload[packetIndex] = '\0'; // Null-terminate the string
-  
 
-    
+
+
     Serial.println(receivedPayload);
 
     String stringifiedPayload = String(receivedPayload);
@@ -151,11 +114,11 @@ void loop()
 
 
     // nonce....plaintext
-    //char *m = decrypt(&ascon, associated, key, nonce);
+    char *m = decrypt(&ascon, associated, key, nonce);
     Serial.print("Received decrypted message: ");
-    //Serial.println(m);
-    //String receivedNonce = String(m).substring(0, 16);
-    if (1)
+    Serial.println(m);
+    String receivedNonce = String(m).substring(0, 16);
+    if (receivedNonce.equals(String(nonce)))
     {
       delay(1000);
       LoRa.beginPacket();
@@ -167,18 +130,17 @@ void loop()
       Serial.println("ACK sent!");
       Serial.println("Listening for packets...");
       incrementNonce(nonce);
+    }else{
+      if(reNonce == 0){
+        reNonce = 1;
+      }
+      else{
+        reNonce = 0;
+        incrementNonce(nonce);
+      }
     }
-    //free(m);
+    free(m);
   }
-}
-
-void printState(uint64_t *state)
-{
-  for (int i = 0; i < 5; i++)
-  {
-    printf("x%d> %16lx\n", i, state[i]);
-  }
-  printf("\n");
 }
 
 uint16_t getNumBlocks(char *data, uint8_t base)
@@ -454,7 +416,6 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
   uint64_t *plaintextInBlocks = splitDataIn64bitBlock(plaintext, plaintextLength);
 
   uint16_t plaintext_numblocks = getNumBlocks(plaintext, 10);
-  printf("plaintext blocks: %d\n", plaintext_numblocks);
   uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
   for (int i = 0; i < plaintext_numblocks; i++)
@@ -511,9 +472,7 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   }
 
   // DECRYPTION
-  printf("original length: %d\n", ascon->originalLength);
   uint16_t ciphertext_numblocks = (ascon->originalLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
-  printf("ciphertext blocks: %d\n", ciphertext_numblocks);
   uint64_t *ciphertextInBlocks = ascon->ciphertext;
   uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
   for (int i = 0; i < ciphertext_numblocks; i++)
