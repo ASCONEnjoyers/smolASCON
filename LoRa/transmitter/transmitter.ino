@@ -125,6 +125,16 @@ void loop()
     int packetIndex = 0;
 
     int packetSize = LoRa.parsePacket();
+
+    int rssi = LoRa.packetRssi();
+    int snr = LoRa.packetSnr();
+    Serial.print("RSSI: ");
+    Serial.print(rssi);
+    Serial.print(" dBm");
+    Serial.print("\tSNR: ");
+    Serial.print(snr);
+    Serial.println(" dB");
+
     if (packetSize)
     {
       Serial.print("Received packet: ");
@@ -137,7 +147,7 @@ void loop()
       receivedPayload[packetIndex] = '\0'; // Null-terminate the string
       Serial.println(receivedPayload);
 
-      ascon_t received = {splitDataIn64bitBlock(receivedPayload, 2), 0};
+      ascon_t received = {splitDataIn64bitBlock(receivedPayload, 2), 0, 2};
 
       char *m = decrypt(&received, associated, key, nonce);
       Serial.print("Received decrypted message: ");
@@ -215,15 +225,15 @@ int cceil(double x)
   int int_part = (int)x; // Extract the integer part
 
   if (x == (double)int_part)
-  {           // If x is already an integer
+  { // If x is already an integer
     return x; // Return x
   }
   else if (x < 0)
-  {                  // If x is negative
+  { // If x is negative
     return int_part; // Return the integer part
   }
   else
-  {                      // If x is positive
+  { // If x is positive
     return int_part + 1; // Return the integer part + 1
   }
 }
@@ -413,7 +423,7 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
   else
   {
     for (uint16_t i = 0; i < numBlocks; i++)
-    {                                 // for each generated associated data block
+    { // for each generated associated data block
       state[0] ^= blockAssociated[i]; // xoring the associated date
       pbox(state, B, 1);              // pboxing, as the diagram shows
     }
@@ -445,11 +455,11 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
   uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
   for (int i = 0; i < plaintext_numblocks; i++)
-  {                                                          // as many rounds as the number of blocks
+  { // as many rounds as the number of blocks
     ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < plaintext_numblocks - 1)
-    {                    // process after last block is different
+    { // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
   }
@@ -504,11 +514,11 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   uint64_t *ciphertextInBlocks = ascon->ciphertext;
   uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
   for (int i = 0; i < ciphertext_numblocks; i++)
-  {                                                          // as many rounds as the number of blocks
+  { // as many rounds as the number of blocks
     plaintextInBlocks[i] = ciphertextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < ciphertext_numblocks - 1)
-    {                    // process after last block is different
+    { // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
   }

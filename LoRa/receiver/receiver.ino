@@ -77,6 +77,44 @@ void setup()
   Serial.println("Listening for packets...");
 }
 
+/*
+ * 
+ * 
+void loop() {
+  // Send a packet
+  char receivedPayload[MAX_STRING_LENGTH];
+  int packetIndex = 0;
+
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    Serial.print("\n\nReceived packet: ");
+
+    // Read packet
+    while (LoRa.available()) {
+      receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
+    }
+    receivedPayload[packetIndex] = '\0'; // Null-terminate the string
+    Serial.println(receivedPayload);
+
+    char *m = decrypt(receivedPayload, associated, key, nonce);
+    Serial.print("Received decrypted message: ");
+    Serial.println(m);
+    String received = String(m);
+    String receivedNonce = received.substring(0, 16);
+    if (receivedNonce.equals(String(nonce))) {
+      delay(1000);
+      LoRa.beginPacket();
+      LoRa.print(encrypt("ok", associated, key, nonce));
+      LoRa.endPacket();
+      Serial.println("ACK sent!");
+      Serial.println("Listening for packets...");
+      *nonce += 1;
+    }
+    free(m);
+  }
+}
+ */
+
 void loop()
 {
   // Send a packet
@@ -94,7 +132,9 @@ void loop()
       receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
     }
     receivedPayload[packetIndex] = '\0'; // Null-terminate the string
+  
 
+    
     Serial.println(receivedPayload);
 
     String stringifiedPayload = String(receivedPayload);
@@ -111,16 +151,16 @@ void loop()
 
 
     // nonce....plaintext
-    char *m = decrypt(&ascon, associated, key, nonce);
+    //char *m = decrypt(&ascon, associated, key, nonce);
     Serial.print("Received decrypted message: ");
-    Serial.println(m);
-    String receivedNonce = String(m).substring(0, 16);
-    if (receivedNonce.equals(String(nonce)))
+    //Serial.println(m);
+    //String receivedNonce = String(m).substring(0, 16);
+    if (1)
     {
       delay(1000);
       LoRa.beginPacket();
-      char tosend[3] = "ok";
-      //sprintf(tosend, "%s", encrypt("ok", associated, key, nonce)->ciphertext);
+      char tosend[3];
+      sprintf(tosend, "%s", encrypt("ok", associated, key, nonce)->ciphertext);
       Serial.println(tosend);
       LoRa.print(tosend);
       LoRa.endPacket();
@@ -128,7 +168,7 @@ void loop()
       Serial.println("Listening for packets...");
       incrementNonce(nonce);
     }
-    free(m);
+    //free(m);
   }
 }
 
