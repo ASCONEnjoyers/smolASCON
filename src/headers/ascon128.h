@@ -12,4 +12,5 @@ typedef struct {
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
 char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce);
+char *getPrintableText(uint64_t *blocks, uint16_t length);
 void incrementNonce(char *nonce);

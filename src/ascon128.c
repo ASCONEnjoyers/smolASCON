@@ -108,7 +108,7 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
     else
     {
         for (uint16_t i = 0; i < numBlocks; i++)
-        { // for each generated associated data block
+        {                                   // for each generated associated data block
             state[0] ^= blockAssociated[i]; // xoring the associated date
             pbox(state, B, 1);              // pboxing, as the diagram shows
         }
@@ -119,10 +119,8 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
-    //char *ciphertext;
     uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
     uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
-
 
     // INITIALIZATION
     uint64_t *state = initialization(blockKey, blockNonce);
@@ -142,21 +140,15 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
     uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
     for (int i = 0; i < plaintext_numblocks; i++)
-    { // as many rounds as the number of blocks
+    {                                                            // as many rounds as the number of blocks
         ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
-        //printf("plaintext block: %lx\n", plaintextInBlocks[i]);
-        //printf("cipher block: %lx\n", ciphertextInBlocks[i]);
-        state[0] = ciphertextInBlocks[i]; // state is updated
+        state[0] = ciphertextInBlocks[i];                        // state is updated
         if (i < plaintext_numblocks - 1)
-        { // process after last block is different
+        {                      // process after last block is different
             pbox(state, B, 1); // state goes through the p-box
         }
     }
 
-    //printf("plaintext length1: %ld\n", plaintextLength);
-    //ciphertext = getStringFrom64bitBlocks(ciphertextInBlocks, plaintextLength);
-
-    //ciphertext = base64_encode((const unsigned char *)ciphertext, plaintextLength);
     // FINALIZATION
 
     uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
@@ -179,7 +171,6 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
     ascon->ciphertext = ciphertextInBlocks;
     ascon->tag = tag_in_blocks;
-    printf("plain Length: %d\n", plaintextLength);
     ascon->originalLength = plaintextLength;
 
     return ascon;
@@ -199,21 +190,18 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
     if (strlen(associated))
     { // if there is any associated date
         state = processAssociated(associated, state);
-
     }
 
     // DECRYPTION
-    //uint16_t ciphertextLength = stringLengthFromB64(ciphertext);
     printf("original length: %d\n", ascon->originalLength);
     uint16_t ciphertext_numblocks = (ascon->originalLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
     printf("ciphertext blocks: %d\n", ciphertext_numblocks);
-    //ciphertext = base64_decode(ciphertext);
     uint64_t *ciphertextInBlocks = ascon->ciphertext;
     uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
     for (int i = 0; i < ciphertext_numblocks; i++)
-    { // as many rounds as the number of blocks
+    {                                                            // as many rounds as the number of blocks
         plaintextInBlocks[i] = ciphertextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
-        state[0] = ciphertextInBlocks[i]; // state is updated
+        state[0] = ciphertextInBlocks[i];                        // state is updated
         if (i < ciphertext_numblocks - 1)
         {                      // process after last block is different
             pbox(state, B, 1); // state goes through the p-box
@@ -232,4 +220,11 @@ void incrementNonce(char *nonce)
     *((uint64_t *)nonce + 1) += 1;
     if (*((uint64_t *)nonce + 1) == 0)
         *((uint64_t *)nonce) += 1;
+}
+
+
+char *getPrintableText(uint64_t *blocks, uint16_t length)
+{
+    char *res = base64_encode((const unsigned char *)getStringFrom64bitBlocks(blocks, length), length);
+    return res;
 }

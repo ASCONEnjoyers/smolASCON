@@ -17,26 +17,23 @@ int main()
     {
 
         fgets(plaintext, 500, stdin);
-        plaintext[strlen(plaintext)] = 0;
-        // scanf("%s", associated);
-
+        plaintext[strlen(plaintext)-1] = 0;
         ascon_t *ascon = encrypt(plaintext, associated, key, nonce);
 
         printf("Plaintext> %s\n", plaintext);
         printf("Associated> %s\n", associated);
-        //printf("Ciphertext> %s\n", ascon->ciphertext);
-        //printf("Tag: %s\n", ascon->tag);
+        printf("Ciphertext> %s\n", getPrintableText(ascon->ciphertext, ascon->originalLength));
+        printf("Tag: %s\n", getPrintableText(ascon->tag, 16));
 
         char *m = decrypt(ascon, associated, key, nonce);
 
-
-        printf("Decrypted plaintext> %s\n\n", m);
+        printf("Decrypted plaintext> %s\n", m);
         printf("decrypted length: %ld\n", strlen(m));
         printf("Nonce used> %lx%lx\n\n", *((uint64_t *)nonce), *((uint64_t *)nonce + 1));
 
         incrementNonce(nonce);
     }
-    
+
     /*int check = 1, counter = 0;
     while(check){
         ascon_t *ascon = encrypt(plaintext, associated, key, nonce);
