@@ -37,7 +37,7 @@ typedef struct
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
 char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce);
 
-char plaintext[MAX_STRING_LENGTH] = "antani";
+char plaintext[MAX_STRING_LENGTH] = "quintana";
 char associated[MAX_STRING_LENGTH] = {0};
 
 char key[17] = "antaniantani1234";
@@ -91,8 +91,10 @@ void loop()
     sprintf(tosend, "%d.%s.%s", strlen(plaintext), ascon->ciphertext, ascon->tag);
     Serial.print("\n\nSending final: ");
     Serial.println(tosend);
-    Serial.print("Ciphertext: ");
-    Serial.println(ascon->ciphertext);
+    Serial.print("Ciphertext (encoded): ");
+    Serial.println(getPrintableText(ascon->ciphertext, ascon->originalLength));
+    Serial.print("Tag (encoded): ");
+    Serial.println(getPrintableText(ascon->tag, 16));
 
     char *m = decrypt(ascon, associated, key, nonce);
     Serial.print("decrypted: ");
@@ -135,13 +137,15 @@ void loop()
       receivedPayload[packetIndex] = '\0'; // Null-terminate the string
       Serial.println(receivedPayload);
 
-      char *m = decrypt(receivedPayload, associated, key, nonce);
+      ascon_t received = {splitDataIn64bitBlock(receivedPayload, 2), 0};
+
+      char *m = decrypt(&received, associated, key, nonce);
       Serial.print("Received decrypted message: ");
       Serial.println(m);
       if (!strcmp(m, "ok"))
       {
         status = 0;  // now transmitting again
-        *nonce += 1; // updating the nonce
+        incrementNonce(nonce);
         Serial.println("RECEIVED!! now sleep 3s and transmitting again...");
         delay(3000);
       }
@@ -175,7 +179,7 @@ uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data i
 {
 
   uint16_t num_blocks = (dataLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
-  uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
+  uint64_t *blocks = (uint64_t *)calloc(num_blocks, sizeof(uint64_t));
 
   memcpy(blocks, data, dataLength);
   if (dataLength % 8)
@@ -189,7 +193,7 @@ uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data i
 uint64_t *divideKeyIntoBlocks(char *key)
 {
   uint16_t len = strlen(key);
-  uint64_t *key_into_blocks = calloc(4, sizeof(uint64_t));
+  uint64_t *key_into_blocks = (uint64_t *)calloc(4, sizeof(uint64_t));
 
   memcpy(key_into_blocks, key, len); // copying key value, the rest is 0 thanks to calloc
   return key_into_blocks;
@@ -250,7 +254,7 @@ char *base64_encode(const unsigned char *data, size_t input_length)
   const char base64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   uint64_t output_length = 4 * ((input_length + 2) / 3);
-  char *encoded_data = malloc(output_length + 1);
+  char *encoded_data = (char *)malloc(output_length + 1);
   if (encoded_data == NULL)
     return NULL;
 
@@ -281,7 +285,7 @@ char *base64_decode(const char *data)
 {
   uint16_t in_len = strlen(data);
   uint16_t out_len = stringLengthFromB64(data);
-  char *decoded_data = malloc(out_len + 1); // +1 for the null-terminator
+  char *decoded_data = (char *)malloc(out_len + 1); // +1 for the null-terminator
   if (!decoded_data)
     return NULL;
 
@@ -460,7 +464,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
   pbox(state, A, 0);
 
-  uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+  uint64_t *tag_in_blocks = (uint64_t *)malloc(2 * sizeof(uint64_t));
   char *tag = (char *)calloc(2, sizeof(uint64_t));
 
   tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key

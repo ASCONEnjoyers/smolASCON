@@ -28,9 +28,9 @@
 uint8_t constants[] = {0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}; // adding constants
 
 typedef struct {
-    uint64_t *ciphertext;
-    uint64_t *tag;
-    uint16_t originalLength;
+  uint64_t *ciphertext;
+  uint64_t *tag;
+  uint16_t originalLength;
 } ascon_t;
 
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce);
@@ -94,22 +94,39 @@ void loop()
       receivedPayload[packetIndex++] = (char)LoRa.read(); // Read and store each character
     }
     receivedPayload[packetIndex] = '\0'; // Null-terminate the string
+
     Serial.println(receivedPayload);
 
-    char *m = decrypt(receivedPayload, associated, key, nonce);
+    String stringifiedPayload = String(receivedPayload);
+    String numberString = stringifiedPayload.substring(0, stringifiedPayload.indexOf('.'));
+    int messageSizeStringSize = numberString.length(); // how many characters in the received message used to display the message size
+    int messageLength = numberString.toInt();
+
+    // messageLength.nonce....ciphertext.tag
+    ascon_t ascon = {
+      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + 1, messageSizeStringSize + messageLength + 22).c_str(), messageLength + 20), // ciphertext
+      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + messageLength + 23).c_str(), 16), // tag
+      messageLength + 20 // messageLength
+    };
+
+
+    // nonce....plaintext
+    char *m = decrypt(&ascon, associated, key, nonce);
     Serial.print("Received decrypted message: ");
     Serial.println(m);
-    String received = String(m);
-    String receivedNonce = received.substring(0, 16);
+    String receivedNonce = String(m).substring(0, 16);
     if (receivedNonce.equals(String(nonce)))
     {
       delay(1000);
       LoRa.beginPacket();
-      LoRa.print(encrypt("ok", associated, key, nonce));
+      char tosend[3] = "ok";
+      //sprintf(tosend, "%s", encrypt("ok", associated, key, nonce)->ciphertext);
+      Serial.println(tosend);
+      LoRa.print(tosend);
       LoRa.endPacket();
       Serial.println("ACK sent!");
       Serial.println("Listening for packets...");
-      *nonce += 1;
+      incrementNonce(nonce);
     }
     free(m);
   }
@@ -135,7 +152,7 @@ uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data i
 {
 
   uint16_t num_blocks = (dataLength + sizeof(uint64_t) - 1) / sizeof(uint64_t); // round up
-  uint64_t *blocks = calloc(num_blocks, sizeof(uint64_t));
+  uint64_t *blocks = (uint64_t *)calloc(num_blocks, sizeof(uint64_t));
 
   memcpy(blocks, data, dataLength);
   if (dataLength % 8)
@@ -149,7 +166,7 @@ uint64_t *splitDataIn64bitBlock(char *data, uint16_t dataLength) // split data i
 uint64_t *divideKeyIntoBlocks(char *key)
 {
   uint16_t len = strlen(key);
-  uint64_t *key_into_blocks = calloc(4, sizeof(uint64_t));
+  uint64_t *key_into_blocks = (uint64_t *)calloc(4, sizeof(uint64_t));
 
   memcpy(key_into_blocks, key, len); // copying key value, the rest is 0 thanks to calloc
   return key_into_blocks;
@@ -171,15 +188,15 @@ int cceil(double x)
   int int_part = (int)x; // Extract the integer part
 
   if (x == (double)int_part)
-  {           // If x is already an integer
+  { // If x is already an integer
     return x; // Return x
   }
   else if (x < 0)
-  {                  // If x is negative
+  { // If x is negative
     return int_part; // Return the integer part
   }
   else
-  {                      // If x is positive
+  { // If x is positive
     return int_part + 1; // Return the integer part + 1
   }
 }
@@ -210,7 +227,7 @@ char *base64_encode(const unsigned char *data, size_t input_length)
   const char base64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   uint64_t output_length = 4 * ((input_length + 2) / 3);
-  char *encoded_data = malloc(output_length + 1);
+  char *encoded_data = (char *)malloc(output_length + 1);
   if (encoded_data == NULL)
     return NULL;
 
@@ -241,7 +258,7 @@ char *base64_decode(const char *data)
 {
   uint16_t in_len = strlen(data);
   uint16_t out_len = stringLengthFromB64(data);
-  char *decoded_data = malloc(out_len + 1); // +1 for the null-terminator
+  char *decoded_data = (char *)malloc(out_len + 1); // +1 for the null-terminator
   if (!decoded_data)
     return NULL;
 
@@ -369,7 +386,7 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
   else
   {
     for (uint16_t i = 0; i < numBlocks; i++)
-    {                                 // for each generated associated data block
+    { // for each generated associated data block
       state[0] ^= blockAssociated[i]; // xoring the associated date
       pbox(state, B, 1);              // pboxing, as the diagram shows
     }
@@ -401,11 +418,11 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
   uint64_t *ciphertextInBlocks = (uint64_t *)calloc(plaintext_numblocks, sizeof(uint64_t));
 
   for (int i = 0; i < plaintext_numblocks; i++)
-  {                                                          // as many rounds as the number of blocks
+  { // as many rounds as the number of blocks
     ciphertextInBlocks[i] = plaintextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < plaintext_numblocks - 1)
-    {                    // process after last block is different
+    { // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
   }
@@ -420,7 +437,7 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
   pbox(state, A, 0);
 
-  uint64_t *tag_in_blocks = malloc(2 * sizeof(uint64_t));
+  uint64_t *tag_in_blocks = (uint64_t *)malloc(2 * sizeof(uint64_t));
   char *tag = (char *)calloc(2, sizeof(uint64_t));
 
   tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
@@ -460,11 +477,11 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   uint64_t *ciphertextInBlocks = ascon->ciphertext;
   uint64_t *plaintextInBlocks = (uint64_t *)calloc(ciphertext_numblocks, sizeof(uint64_t));
   for (int i = 0; i < ciphertext_numblocks; i++)
-  {                                                          // as many rounds as the number of blocks
+  { // as many rounds as the number of blocks
     plaintextInBlocks[i] = ciphertextInBlocks[i] ^ state[0]; // xoring plaintext and first block of state
     state[0] = ciphertextInBlocks[i];                        // state is updated
     if (i < ciphertext_numblocks - 1)
-    {                    // process after last block is different
+    { // process after last block is different
       pbox(state, B, 1); // state goes through the p-box
     }
   }
