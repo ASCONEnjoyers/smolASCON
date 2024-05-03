@@ -71,7 +71,7 @@ Per la decifratura invece il blocco di ciphertext viene inserito nello state ed 
 Si noti come in assenza di dati associati e in presenza di un singolo blocco di plaintext da cifrare, non sono necessarie altre $p^b$ sullo state. Per prevenire lo scenario in cui lo XOR della chiave si cancelli, lo XOR viene effettuato su due parti dello state diverse. 
 \paragraph*{Finalizzazione}
 Durante la finalizzazione la chiave $K$ viene XORata con lo state, per poi applicare $p^a$. Si estrae dunque il tag $T$ dai 128 bit meno significativi dello state XORati con la chiave $K$. 
-\subsection{Funzione $p$}
+\subsection{Funzione p}
 La funzione $p$ introduce le proprietà di confusione, tramite S-Box, e diffusione, tramite il linear layer. Ogni round $p$ è un SPN-based round.  
 \begin{figure}[h!]
     \centering
