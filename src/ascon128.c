@@ -248,9 +248,15 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 
 void incrementNonce(char *nonce)
 {
-    *((uint64_t *)nonce + 1) += 1;
+    /**((uint64_t *)nonce + 1) += 1;
     if (*((uint64_t *)nonce + 1) == 0)
-        *((uint64_t *)nonce) += 1;
+        *((uint64_t *)nonce) += 1;*/
+    for(int i = 15; i >= 0; i--){
+        nonce[i]--;
+        if(nonce[i] != 0){
+            break;
+        }
+    }
 }
 
 

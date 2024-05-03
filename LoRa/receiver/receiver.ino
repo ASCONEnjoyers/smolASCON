@@ -107,39 +107,44 @@ void loop()
 
     // messageLength.nonce....ciphertext.tag
     ascon_t ascon = {
-      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + 1, messageSizeStringSize + messageLength + 22).c_str(), messageLength + 20), // ciphertext
-      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + messageLength + 23).c_str(), 16), // tag
+      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + 1, messageSizeStringSize + messageLength + 25).c_str(), messageLength + 25), // ciphertext
+      splitDataIn64bitBlock((char *)stringifiedPayload.substring(messageSizeStringSize + messageLength + 26, messageSizeStringSize + messageLength + 42).c_str(), 16), // tag
       messageLength + 20 // messageLength
     };
 
-
     // nonce....plaintext
     char *m = decrypt(&ascon, associated, key, nonce);
-    Serial.print("Received decrypted message: ");
-    Serial.println(m);
-    String receivedNonce = String(m).substring(0, 16);
-    if (receivedNonce.equals(String(nonce)))
-    {
-      delay(1000);
-      LoRa.beginPacket();
-      char tosend[3];
-      sprintf(tosend, "%s", encrypt("ok", associated, key, nonce)->ciphertext);
-      Serial.println(tosend);
-      LoRa.print(tosend);
-      LoRa.endPacket();
-      Serial.println("ACK sent!");
-      Serial.println("Listening for packets...");
-      incrementNonce(nonce);
-    }else{
-      if(reNonce == 0){
-        reNonce = 1;
-      }
-      else{
-        reNonce = 0;
+
+    if (m != NULL) {
+      Serial.print("Received decrypted message: ");
+      Serial.println(m);
+      String receivedNonce = String(m).substring(0, 16);
+      if (receivedNonce.equals(String(nonce)))
+      {
+        delay(1000);
+        LoRa.beginPacket();
+        char tosend[3];
+        sprintf(tosend, "%s", encrypt("ok", associated, key, nonce)->ciphertext);
+        Serial.println(tosend);
+        LoRa.print(tosend);
+        LoRa.endPacket();
+        Serial.println("ACK sent!");
+        Serial.println("Listening for packets...");
         incrementNonce(nonce);
+      } else {
+        if (reNonce == 0) {
+          reNonce = 1;
+          decrementNonce(nonce);
+        }
+        else {
+          reNonce = 0;
+          incrementNonce(nonce);
+        }
       }
+      free(m);
     }
-    free(m);
+    else
+      Serial.println("Invalid tag");
   }
 }
 
@@ -397,6 +402,23 @@ uint64_t *processAssociated(char *associated, uint64_t *state)
   return state;
 }
 
+uint64_t *finalize(uint64_t *state, char *key) {
+  uint64_t *key_into_blocks = divideKeyIntoBlocks(key);
+
+  for (int i = 0; i < 3; i++)
+  {
+    state[i + 1] ^= key_into_blocks[i]; // updating state
+  }
+
+  pbox(state, A, 0);
+
+  uint64_t *tag_in_blocks = (uint64_t*) malloc(2 * sizeof(uint64_t));
+  tag_in_blocks[0] = state[3] ^ key_into_blocks[0]; // last 128 bits of state are xored with 128 bit key
+  tag_in_blocks[1] = state[4] ^ key_into_blocks[1];
+
+  return tag_in_blocks;
+}
+
 ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 {
   uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
@@ -457,7 +479,6 @@ ascon_t *encrypt(char *plaintext, char *associated, char *key, char *nonce)
 
 char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 {
-
   char *plaintext;
   uint64_t *blockKey = splitDataIn64bitBlock(key, KEY_SIZE / 8);
   uint64_t *blockNonce = splitDataIn64bitBlock(nonce, NONCE_SIZE / 8);
@@ -486,17 +507,29 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   }
 
   plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ascon->originalLength);
-
   // FINALIZATION
-  // todo
-  return plaintext;
+
+  uint64_t *tag_in_blocks = (uint64_t *)calloc(2, sizeof(uint64_t));
+  tag_in_blocks = finalize(state, key);
+
+  if (tag_in_blocks[0] == ascon->tag[0] && tag_in_blocks[1] == ascon->tag[1]) {   // if tag is the same
+    return plaintext;
+  } else {
+    return NULL;
+  }
+
 }
 
 void incrementNonce(char *nonce)
 {
-  *((uint64_t *)nonce + 1) += 1;
-  if (*((uint64_t *)nonce + 1) == 0)
-    *((uint64_t *)nonce) += 1;
+  nonce[4]++;
+}
+
+void decrementNonce(char *nonce)
+{
+  *((uint64_t *)nonce) -= 1;
+  if (*((uint64_t *)nonce) == 0)
+    *((uint64_t *)nonce + 1) -= 1;
 }
 
 char *getPrintableText(uint64_t *blocks, uint16_t length)
