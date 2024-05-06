@@ -3,9 +3,8 @@
 \contentsline {section}{\numberline {2}Specifica}{2}{section.2}%
 \contentsline {subsection}{\numberline {2.1}Introduzione}{2}{subsection.2.1}%
 \contentsline {subsubsection}{\numberline {2.1.1}Authenticated Encryption}{2}{subsubsection.2.1.1}%
-\contentsline {subsubsection}{\numberline {2.1.2}Hashing}{2}{subsubsection.2.1.2}%
-\contentsline {subsubsection}{\numberline {2.1.3}Parametri}{2}{subsubsection.2.1.3}%
-\contentsline {subsubsection}{\numberline {2.1.4}State}{2}{subsubsection.2.1.4}%
+\contentsline {subsubsection}{\numberline {2.1.2}Parametri}{2}{subsubsection.2.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.3}State}{3}{subsubsection.2.1.3}%
 \contentsline {subsection}{\numberline {2.2}Authenticated Encryption}{3}{subsection.2.2}%
 \contentsline {subsection}{\numberline {2.3}Funzione p}{4}{subsection.2.3}%
 \contentsline {subsection}{\numberline {2.4}ASCON-128}{5}{subsection.2.4}%
@@ -16,3 +15,5 @@
 \contentsline {subsection}{\numberline {4.1}Security Claims}{7}{subsection.4.1}%
 \contentsline {subsection}{\numberline {4.2}Security Analysis}{7}{subsection.4.2}%
 \contentsline {subsubsection}{\numberline {4.2.1}Crittoanalisi differenziale e lineare}{7}{subsubsection.4.2.1}%
+\contentsline {section}{\numberline {5}Protocollo di comunicazione}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Implementazione}{9}{subsection.5.1}%

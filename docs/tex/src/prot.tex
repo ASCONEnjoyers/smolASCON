@@ -1,0 +1,27 @@
+\section{Protocollo di comunicazione}
+Si passa ora alla proposta di implementazione di un semplice protocollo di comunicazione half-duplex che fa uso dello schema appena implementato. 
+\newline\newline
+In particolare, si propone un protocollo di comunicazione tra due dispositivi embedded, uno dei quali funge da \textsl{master} e l'altro da \textsl{slave}. Il protocollo da cui si è stati ispirati corrisponde ad uno \textsl{Stop And Wait ARQ}: Il master invia un messaggio cifrato allo slave, che conferma la ricezione del messaggio. Il master attende la ricezione della conferma prima di trasmettere il messaggio successivo. Tecniche di controllo di errore sono implementate per rispondere ad eventuali perdite di messaggi o alterazioni del contenuto, che causerebbero un fallimento della verifica del tag. 
+\newline\newline
+In questa sede non si discuterà di come i due dispositivi si scambino le chiavi, ma si suppone che le chiavi siano già state scambiate in precedenza. Si suppone che entrambi i nodi, all'inizio del protocollo, condividino una chiave segreta $K$ ed un nonce $N$.
+\newline\newline
+Il master trasmette un messaggio con il seguente formato: 
+\begin{center}
+    \texttt{messageLength.\textsl{nonce....message}.tag}
+\end{center}
+Dove della porzione \textsl{nonce....message} ne viene trasmesso il ciphertext. 
+\newline
+Si trasmette la lunghezza del payload, il nonce utilizzato per la cifratura, il payload effettivo ed il tag per la verifica dell'integrità del messaggio, previsto dalla specifica di ASCON. la porzione cifrata non viene trasmessa con un particolare encoding, dunque è necessario conoscere anche la lunghezza del messaggio affinché lo schema di decifratura possa operare correttamente. Il nonce utilizzato viene utilizzato in modo tale che lo slave possa verificare che il nonce utilizzato per la decifratura corrisponda a quello utilizzato per la cifratura. Si tratta di un meccanismo ulteriore oltre al tag per verificare che la decifratura sia avvenuta in maniera corretta. In questo modo il receiver può avere la certezza di essere sincronizzato con il master circa il nonce utilizzato, per poi incrementarlo per la decifratura successiva. Infine il tag, per realizzare il processo di decifratura e verificare l'integrità. 
+\newline\newline
+Quando il ricevente verifica, come indicato qui sopra, la corretta decifratura del messaggio, trasmette un messaggio contente "\textsl{ok}" cifrato con il nonce concludendo con l'incremento del nonce. 
+\newline\newline
+Il master riceve l'ack, verifica la decifratura e se il messaggio corrisponde ad "\textsl{ok}", incrementa il nonce anche lui, per poi passare alla trasmissione successiva. 
+\newline\newline
+Nel caso in cui l'ack non dovesse essere ricevuto dal master, il master si occuperebbe di ritrasmettere il messaggio. Qui, due scenari: 
+\begin{itemize}
+    \item Il messaggio non era stato ricevuto dallo slave: entrambi sono ancora sincronizzati sul medesimo nonce, dunque ad una ritrasmissione successiva la comunicazione può riprendere
+    \item Il messaggio era stato trasmesso, lo slave aveva inviato la conferma, che però non è stata ricevuta. Lo slave si trova ad un nonce successivo rispetto a quello del master. Lo slave, alla ricezione della ritrasmissione non sarà in grado di decifrare correttamente, dunque entra in uno stato di \textsl{retryNonce} in cui tenta la decifratura con il nonce precedente. Se la decifratura va a buon fine, lo slave ripristina il nonce al fine di sincronizzarsi con il master.
+\end{itemize}
+\subsection{Implementazione}
+L'esempio implementativo proposto prevede l'utilizzo di due sistemi embedded ESP8266 e l'utilizzo di due moduli LoRa per trasmissione e ricezione. 
+\newpage
