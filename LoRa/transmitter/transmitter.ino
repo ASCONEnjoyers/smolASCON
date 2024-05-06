@@ -512,9 +512,7 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 
 void incrementNonce(char *nonce)
 {
-  *((uint64_t *)nonce + 1) += 1;
-  if (*((uint64_t *)nonce + 1) == 0)
-    *((uint64_t *)nonce) += 1;
+  nonce[4]++;
 }
 
 char *getPrintableText(uint64_t *blocks, uint16_t length)

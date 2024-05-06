@@ -13,6 +13,7 @@ int main()
     char key[17] = "antaniantani1234";
     char nonce[17] = "antaniantani1234";
 
+
     while (1)
     {
 
