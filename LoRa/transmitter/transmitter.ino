@@ -86,31 +86,28 @@ void loop()
     char tosend[MAX_STRING_LENGTH];
     sprintf(tosend, "%s....%s", nonce, plaintext);
     ascon_t *ascon = encrypt(tosend, associated, key, nonce);
-    Serial.print("Sending: ");
+    Serial.print("\n=========\n|| Sending message: ");
     Serial.println(tosend);
     sprintf(tosend, "%d.%s.%s", strlen(plaintext), ascon->ciphertext, ascon->tag);
-    Serial.print("\n\nSending final: ");
-    Serial.println(tosend);
-    Serial.print("Ciphertext (encoded): ");
+    Serial.print("|| Ciphertext (encoded): ");
     Serial.println(getPrintableText(ascon->ciphertext, ascon->originalLength));
-    Serial.print("Tag (encoded): ");
+    Serial.print("|| Tag (encoded): ");
     Serial.println(getPrintableText(ascon->tag, 16));
 
     char *m = decrypt(ascon, associated, key, nonce);
-    Serial.print("decrypted: ");
+    Serial.print("||\n|| decrypted: ");
     Serial.println(m);
 
-    Serial.println("Sending ciphertext...");
     LoRa.beginPacket();
     LoRa.print(tosend);
     LoRa.endPacket();
-    Serial.println("Packet sent!");
+    Serial.println("|| ++Packet sent!++\n=========\n");
 
     free(m);
 
     startTime = millis(); // starting timeout timer
     status = 1;
-    Serial.println("Now waiting for ACK...");
+    Serial.println("\nNow waiting for ACK...");
   }
   else
   { // waiting transmission ACK
@@ -506,13 +503,15 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
   plaintext = getStringFrom64bitBlocks(plaintextInBlocks, ascon->originalLength);
 
   // FINALIZATION
-  // todo
+ 
   return plaintext;
 }
 
 void incrementNonce(char *nonce)
 {
-  nonce[4]++;
+  *((uint64_t *)nonce + 1) += 1;
+  if (*((uint64_t *)nonce + 1) == 0)
+    *((uint64_t *)nonce) += 1;
 }
 
 char *getPrintableText(uint64_t *blocks, uint16_t length)

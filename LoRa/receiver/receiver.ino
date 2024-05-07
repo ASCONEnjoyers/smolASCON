@@ -87,7 +87,7 @@ void loop()
   int packetSize = LoRa.parsePacket();
   if (packetSize)
   {
-    Serial.print("\n\nReceived packet: ");
+    Serial.print("\n=========\n|| Received packet: ");
 
     // Read packet
     while (LoRa.available())
@@ -116,7 +116,7 @@ void loop()
     char *m = decrypt(&ascon, associated, key, nonce);
 
     if (m != NULL) {
-      Serial.print("Received decrypted message: ");
+      Serial.print("|| Received decrypted message: ");
       Serial.println(m);
       String receivedNonce = String(m).substring(0, 16);
       if (receivedNonce.equals(String(nonce)))
@@ -128,7 +128,7 @@ void loop()
         Serial.println(tosend);
         LoRa.print(tosend);
         LoRa.endPacket();
-        Serial.println("ACK sent!");
+        Serial.println("|| ++ACK sent!++\n=========\n\n");
         Serial.println("Listening for packets...");
         incrementNonce(nonce);
       } else {
@@ -522,14 +522,16 @@ char *decrypt(ascon_t *ascon, char *associated, char *key, char *nonce)
 
 void incrementNonce(char *nonce)
 {
-  nonce[4]++;
+  *((uint64_t *)nonce + 1) += 1;
+  if (*((uint64_t *)nonce + 1) == 0)
+    *((uint64_t *)nonce) += 1;
 }
 
 void decrementNonce(char *nonce)
 {
-  *((uint64_t *)nonce) -= 1;
-  if (*((uint64_t *)nonce) == 0)
-    *((uint64_t *)nonce + 1) -= 1;
+  *((uint64_t *)nonce + 1) -= 1;
+  if (*((uint64_t *)nonce + 1) == 0)
+    *((uint64_t *)nonce) -= 1;
 }
 
 char *getPrintableText(uint64_t *blocks, uint16_t length)

@@ -252,7 +252,7 @@ void incrementNonce(char *nonce)
     if (*((uint64_t *)nonce + 1) == 0)
         *((uint64_t *)nonce) += 1;*/
     for(int i = 15; i >= 0; i--){
-        nonce[i]--;
+        nonce[i]++;
         if(nonce[i] != 0){
             break;
         }
